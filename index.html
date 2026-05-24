@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zofía — Documentación</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked@9.1.6/marked.min.js"></script>
+  <!-- Highlight.js — dos temas, uno activo a la vez -->
+  <link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css">
+  <link id="hljs-dark"  rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css" disabled>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ─── TEMA CLARO ──────────────────────────────────── */
+    :root {
+      --sidebar-bg:     #1e1e2e;
+      --sidebar-hover:  #313244;
+      --sidebar-active: #89b4fa;
+      --sidebar-text:   #cdd6f4;
+      --sidebar-muted:  #6c7086;
+      --sidebar-w:      248px;
+      --header-h:       52px;
+
+      --bg:             #f5f5f7;
+      --card-bg:        #ffffff;
+      --text:           #2d3748;
+      --text-muted:     #718096;
+      --heading:        #1a202c;
+      --border:         #e2e8f0;
+      --accent:         #4299e1;
+      --accent-soft:    #ebf8ff;
+      --code-bg:        #f0f4f8;
+      --code-border:    #dae1e9;
+      --code-text:      #c0392b;
+      --quote-border:   #4299e1;
+      --quote-bg:       #ebf8ff;
+      --table-head:     #f7fafc;
+      --shadow:         rgba(0,0,0,0.06);
+    }
+
+    /* ─── TEMA OSCURO ─────────────────────────────────── */
+    [data-theme="dark"] {
+      --sidebar-bg:     #11111b;
+      --sidebar-hover:  #1e1e2e;
+      --sidebar-active: #89b4fa;
+      --sidebar-text:   #cdd6f4;
+      --sidebar-muted:  #585b70;
+
+      --bg:             #13131a;
+      --card-bg:        #1e1e2e;
+      --text:           #cdd6f4;
+      --text-muted:     #6c7086;
+      --heading:        #cdd6f4;
+      --border:         #313244;
+      --accent:         #89b4fa;
+      --accent-soft:    rgba(137,180,250,0.09);
+      --code-bg:        #181825;
+      --code-border:    #45475a;
+      --code-text:      #f38ba8;
+      --quote-border:   #89b4fa;
+      --quote-bg:       rgba(137,180,250,0.07);
+      --table-head:     #181825;
+      --shadow:         rgba(0,0,0,0.3);
+    }
+
+    /* ─── TRANSICIÓN SUAVE AL CAMBIAR TEMA ───────────── */
+    body, #header, #sidebar, #main, #content,
+    .nav-item, .welcome-card, blockquote,
+    pre, td, th, code { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease; }
+
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--text);
+      background: var(--bg);
+    }
+
+    /* ─── HEADER ──────────────────────────────────────── */
+    #header {
+      height: var(--header-h);
+      min-height: var(--header-h);
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+      z-index: 50;
+    }
+
+    #hamburger, #theme-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px; height: 36px;
+      background: none;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 18px;
+      flex-shrink: 0;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    #hamburger:hover, #theme-toggle:hover {
+      background: var(--bg);
+      border-color: var(--border);
+      color: var(--text);
+    }
+    #hamburger { display: none; }
+
+    #doc-header-icon  { font-size: 17px; flex-shrink: 0; }
+    #doc-header-title { font-size: 14px; font-weight: 600; color: var(--heading); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+    #doc-header-path  { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', Consolas, monospace; white-space: nowrap; flex-shrink: 0; margin-right: 4px; }
+    #theme-toggle { margin-left: auto; flex-shrink: 0; }
+
+    /* ─── BODY ROW ────────────────────────────────────── */
+    #body-row { display: flex; flex: 1; overflow: hidden; }
+
+    /* ─── BACKDROP ────────────────────────────────────── */
+    #backdrop {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 150;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #backdrop.visible { display: block; }
+
+    /* ─── SIDEBAR ─────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--sidebar-bg);
+      height: 100%;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: #313244 transparent;
+      flex-shrink: 0;
+      z-index: 200;
+    }
+    #sidebar-logo {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    #sidebar-logo h1 { font-size: 17px; font-weight: 700; color: #89b4fa; letter-spacing: 0.04em; }
+    #sidebar-logo p  { font-size: 11px; color: var(--sidebar-muted); margin-top: 2px; line-height: 1.4; }
+
+    .nav-section { padding: 12px 0 4px; }
+    .nav-section-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--sidebar-muted);
+      padding: 0 16px 5px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 10px 16px; cursor: pointer;
+      color: var(--sidebar-text); font-size: 13.5px;
+      border-left: 3px solid transparent;
+      text-decoration: none; user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px;
+    }
+    .nav-item:hover  { background: var(--sidebar-hover); }
+    .nav-item.active { background: rgba(137,180,250,0.12); border-left-color: var(--sidebar-active); color: var(--sidebar-active); font-weight: 500; }
+    .nav-icon { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+
+    .sidebar-footer {
+      margin-top: auto; padding: 12px 16px; font-size: 11px;
+      color: var(--sidebar-muted); border-top: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* ─── MAIN ────────────────────────────────────────── */
+    #main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; min-width: 0; }
+
+    #content { padding: 36px 40px; max-width: 860px; width: 100%; margin: 0 auto; }
+
+    #loading {
+      display: flex; align-items: center; justify-content: center;
+      height: 200px; color: var(--text-muted); font-size: 14px; gap: 10px;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── MARKDOWN ────────────────────────────────────── */
+    #content h1 {
+      font-size: 26px; font-weight: 700; color: var(--heading);
+      margin: 0 0 8px; padding-bottom: 12px; border-bottom: 2px solid var(--border);
+    }
+    #content h2 {
+      font-size: 19px; font-weight: 600; color: var(--heading);
+      margin: 34px 0 12px; padding-left: 12px; border-left: 3px solid var(--accent);
+    }
+    #content h3 { font-size: 16px; font-weight: 600; color: var(--heading); margin: 22px 0 8px; }
+    #content h4 { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin: 18px 0 6px; }
+    #content p  { margin-bottom: 14px; }
+    #content a  { color: var(--accent); text-decoration: none; }
+    #content a:hover { text-decoration: underline; }
+    #content ul, #content ol { margin: 0 0 14px 22px; }
+    #content li { margin-bottom: 4px; }
+    #content li > p { margin-bottom: 6px; }
+    #content strong { font-weight: 600; }
+
+    #content blockquote {
+      border-left: 3px solid var(--quote-border);
+      padding: 10px 14px; margin: 14px 0;
+      background: var(--quote-bg);
+      border-radius: 0 6px 6px 0;
+      color: var(--text-muted); font-size: 14px;
+    }
+    #content blockquote p { margin: 0; }
+    #content blockquote p + p { margin-top: 6px; }
+
+    #content code {
+      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      font-size: 12.5px;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: 1px 5px; border-radius: 4px;
+      color: var(--code-text);
+    }
+    #content pre {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 8px; margin: 14px 0;
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+    }
+    #content pre code {
+      display: block; padding: 14px 16px;
+      font-size: 12.5px; line-height: 1.6;
+      color: var(--text); background: none; border: none;
+    }
+
+    .table-wrap {
+      overflow-x: auto; -webkit-overflow-scrolling: touch;
+      margin: 14px 0; border-radius: 6px; border: 1px solid var(--border);
+    }
+    #content table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 400px; }
+    #content th {
+      background: var(--table-head); text-align: left;
+      padding: 9px 13px; font-weight: 600;
+      border-bottom: 1px solid var(--border); color: var(--heading); white-space: nowrap;
+    }
+    #content td { padding: 8px 13px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    #content tr:last-child td { border-bottom: none; }
+    [data-theme="light"] #content tr:nth-child(even) td { background: #fafbfc; }
+    [data-theme="dark"]  #content tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+
+    #content hr { border: none; border-top: 1px solid var(--border); margin: 26px 0; }
+
+    .hljs { background: transparent !important; }
+
+    /* ─── WELCOME ─────────────────────────────────────── */
+    #welcome { padding: 48px 32px; text-align: center; }
+    #welcome .logo {
+      font-size: 52px; font-weight: 900; letter-spacing: -2px;
+      background: linear-gradient(135deg, #4299e1, #805ad5);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 8px;
+    }
+    #welcome .tagline { font-size: 15px; color: var(--text-muted); margin-bottom: 32px; line-height: 1.5; }
+
+    .welcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; text-align: left; margin-top: 20px; }
+    .welcome-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; cursor: pointer;
+      transition: box-shadow 0.15s, transform 0.15s, background-color 0.2s, border-color 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .welcome-card:hover  { box-shadow: 0 4px 16px var(--shadow); transform: translateY(-2px); }
+    .welcome-card:active { transform: scale(0.98); }
+    .welcome-card .wc-icon  { font-size: 22px; margin-bottom: 6px; }
+    .welcome-card .wc-title { font-weight: 600; font-size: 14px; color: var(--heading); margin-bottom: 4px; }
+    .welcome-card .wc-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .welcome-path { font-size: 11px; font-family: 'JetBrains Mono', monospace; color: var(--accent); margin-top: 8px; }
+
+    /* ─── RESPONSIVE ──────────────────────────────────── */
+    @media (max-width: 767px) {
+      #sidebar {
+        position: fixed; top: 0; bottom: 0;
+        left: calc(-1 * var(--sidebar-w));
+        transition: left 0.25s ease, box-shadow 0.25s ease;
+      }
+      #sidebar.open { left: 0; box-shadow: 4px 0 24px rgba(0,0,0,0.4); }
+
+      #hamburger { display: flex; }
+      #doc-header-path { display: none; }
+
+      #content { padding: 22px 16px 40px; }
+      #welcome { padding: 28px 16px; }
+      #welcome .logo { font-size: 38px; }
+      #welcome .tagline { font-size: 13px; }
+      .welcome-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+
+      #content { font-size: 14px; }
+      #content h1 { font-size: 20px; }
+      #content h2 { font-size: 17px; }
+      #content h3 { font-size: 15px; }
+      #content blockquote { font-size: 13px; }
+    }
+
+    @media (max-width: 400px) {
+      .welcome-grid { grid-template-columns: 1fr; }
+      #welcome .logo { font-size: 32px; }
+    }
+
+    @media (min-width: 768px) and (max-width: 1023px) {
+      :root { --sidebar-w: 210px; }
+      #content { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div id="header">
+  <button id="hamburger" onclick="toggleSidebar()" aria-label="Menú">☰</button>
+  <span id="doc-header-icon">⚡</span>
+  <span id="doc-header-title">Zofía — Documentación</span>
+  <span id="doc-header-path"></span>
+  <button id="theme-toggle" onclick="toggleTheme()" aria-label="Cambiar tema" title="Cambiar tema">🌙</button>
+</div>
+
+<div id="backdrop" onclick="closeSidebar()"></div>
+
+<div id="body-row">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div id="sidebar-logo">
+      <h1>⚡ Zofía</h1>
+      <p>IA desde cero en Zymbol<br>Para hispanohablantes</p>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Proyecto</div>
+      <a class="nav-item" data-path="README.md" data-icon="🏠" data-title="Inicio">
+        <span class="nav-icon">🏠</span> Inicio
+      </a>
+      <a class="nav-item" data-path="HOJA_DE_RUTA.md" data-icon="🗺" data-title="Hoja de Ruta">
+        <span class="nav-icon">🗺</span> Hoja de Ruta
+      </a>
+      <a class="nav-item" data-path="DISE%C3%91O_API.md" data-icon="⚙" data-title="Diseño API">
+        <span class="nav-icon">⚙</span> Diseño API
+      </a>
+      <a class="nav-item" data-path="HALLAZGOS.md" data-icon="🔍" data-title="Hallazgos · v0.0.6">
+        <span class="nav-icon">🔍</span> Hallazgos
+      </a>
+      <a class="nav-item" data-path="EVALUACION_MATEMATICA.md" data-icon="⚖" data-title="Evaluación Matemática">
+        <span class="nav-icon">⚖</span> Evaluación Matemática
+      </a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Fundamentos</div>
+      <a class="nav-item" data-path="docs/00_fundamentos_matematicos.md" data-icon="∑" data-title="Fundamentos Matemáticos">
+        <span class="nav-icon">∑</span> 00 · Matemáticas
+      </a>
+      <a class="nav-item" data-path="docs/01_tensores.md" data-icon="📐" data-title="Tensores">
+        <span class="nav-icon">📐</span> 01 · Tensores
+      </a>
+      <a class="nav-item" data-path="docs/02_gradientes_y_optimizacion.md" data-icon="∇" data-title="Gradientes y Optimización">
+        <span class="nav-icon">∇</span> 02 · Gradientes
+      </a>
+      <a class="nav-item" data-path="docs/03_redes_neuronales.md" data-icon="🧠" data-title="Redes Neuronales">
+        <span class="nav-icon">🧠</span> 03 · Redes Neuronales
+      </a>
+      <a class="nav-item" data-path="docs/04_mecanismo_de_atencion.md" data-icon="👁" data-title="Mecanismo de Atención">
+        <span class="nav-icon">👁</span> 04 · Atención
+      </a>
+      <a class="nav-item" data-path="docs/05_arquitectura_transformer.md" data-icon="⚡" data-title="Arquitectura Transformer">
+        <span class="nav-icon">⚡</span> 05 · Transformer
+      </a>
+    </div>
+
+    <div class="sidebar-footer">Zymbol · Zofía v0.0.6</div>
+  </nav>
+
+  <!-- CONTENIDO -->
+  <div id="main">
+    <div id="content">
+      <div id="welcome">
+        <div class="logo">Zofía</div>
+        <div class="tagline">Inteligencia Artificial desde cero en Zymbol · Para hispanohablantes</div>
+        <div class="welcome-grid">
+          <div class="welcome-card" onclick="loadDoc('README.md','🏠','Inicio')">
+            <div class="wc-icon">🏠</div><div class="wc-title">Inicio</div>
+            <div class="wc-desc">Qué es Zofía, para quién es y cómo leer el proyecto.</div>
+            <div class="welcome-path">README.md</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('HOJA_DE_RUTA.md','🗺','Hoja de Ruta')">
+            <div class="wc-icon">🗺</div><div class="wc-title">Hoja de Ruta</div>
+            <div class="wc-desc">5 fases con criterios de aceptación concretos.</div>
+            <div class="welcome-path">HOJA_DE_RUTA.md</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('DISE%C3%91O_API.md','⚙','Diseño API')">
+            <div class="wc-icon">⚙</div><div class="wc-title">Diseño API</div>
+            <div class="wc-desc">Contratos de todos los módulos antes de codificar.</div>
+            <div class="welcome-path">DISEÑO_API.md</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('HALLAZGOS.md','🔍','Hallazgos')">
+            <div class="wc-icon">🔍</div><div class="wc-title">Hallazgos → v0.0.6</div>
+            <div class="wc-desc">GAPs e IDEAs que Zofía expone en Zymbol.</div>
+            <div class="welcome-path">HALLAZGOS.md</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('docs/00_fundamentos_matematicos.md','∑','Fundamentos Matemáticos')">
+            <div class="wc-icon">∑</div><div class="wc-title">00 · Matemáticas</div>
+            <div class="wc-desc">Álgebra lineal, derivadas y gradientes.</div>
+            <div class="welcome-path">docs/00_...</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('docs/04_mecanismo_de_atencion.md','👁','Mecanismo de Atención')">
+            <div class="wc-icon">👁</div><div class="wc-title">04 · Atención</div>
+            <div class="wc-desc">Q, K, V y scaled dot-product attention.</div>
+            <div class="welcome-path">docs/04_...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  marked.setOptions({ gfm: true, breaks: false });
+
+  // ── Tema ──────────────────────────────────────────────────
+  const STORAGE_KEY = 'Zofía-theme';
+
+  function applyTheme(dark) {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    document.getElementById('theme-toggle').textContent = dark ? '☀️' : '🌙';
+    document.getElementById('hljs-light').disabled = dark;
+    document.getElementById('hljs-dark').disabled  = !dark;
+    localStorage.setItem(STORAGE_KEY, dark ? 'dark' : 'light');
+    // Re-highlight bloques visibles si los hay
+    document.querySelectorAll('pre code').forEach(b => {
+      b.removeAttribute('data-highlighted');
+      hljs.highlightElement(b);
+    });
+  }
+
+  function toggleTheme() {
+    applyTheme(document.documentElement.getAttribute('data-theme') !== 'dark');
+  }
+
+  // Aplicar preferencia guardada (o del sistema si no hay guardada)
+  (function() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    applyTheme(saved ? saved === 'dark' : prefersDark);
+  })();
+
+  // ── Sidebar ───────────────────────────────────────────────
+  function toggleSidebar() {
+    const open = document.getElementById('sidebar').classList.toggle('open');
+    document.getElementById('backdrop').classList.toggle('visible', open);
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('backdrop').classList.remove('visible');
+    document.body.style.overflow = '';
+  }
+  window.addEventListener('resize', () => { if (window.innerWidth >= 768) closeSidebar(); });
+
+  // ── Cargar documento ──────────────────────────────────────
+  function loadDoc(path, icon, title) {
+    if (window.innerWidth < 768) closeSidebar();
+
+    document.getElementById('content').innerHTML =
+      '<div id="loading"><div class="spinner"></div>Cargando…</div>';
+    document.getElementById('doc-header-title').textContent = title;
+    document.getElementById('doc-header-icon').textContent  = icon;
+    document.getElementById('doc-header-path').textContent  = decodeURIComponent(path);
+
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const hit = document.querySelector(`.nav-item[data-path="${path}"]`);
+    if (hit) hit.classList.add('active');
+
+    history.replaceState(null, '', '#' + path.replace('docs/', '').replace('.md', ''));
+
+    fetch(path)
+      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.text(); })
+      .then(md => {
+        const html = marked.parse(md)
+          .replace(/<table>/g, '<div class="table-wrap"><table>')
+          .replace(/<\/table>/g, '</table></div>');
+        document.getElementById('content').innerHTML = html;
+        document.querySelectorAll('#content pre code').forEach(b => hljs.highlightElement(b));
+        document.getElementById('main').scrollTop = 0;
+      })
+      .catch(err => {
+        document.getElementById('content').innerHTML = `
+          <div style="padding:40px 20px;text-align:center;color:#e53e3e;">
+            <div style="font-size:36px;margin-bottom:12px;">⚠</div>
+            <div style="font-weight:600;margin-bottom:6px;">No se pudo cargar el documento</div>
+            <code style="font-size:12px;color:var(--text-muted);">${decodeURIComponent(path)}</code>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">${err.message}</div>
+            <div style="margin-top:20px;font-size:13px;color:var(--text-muted);line-height:1.8;">
+              Inicia el servidor desde la carpeta Zofía/<br>
+              <code style="background:var(--code-bg);padding:4px 10px;border-radius:4px;margin-top:6px;display:inline-block;font-size:12px;">bash servidor.sh</code>
+            </div>
+          </div>`;
+      });
+  }
+
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () =>
+      loadDoc(item.dataset.path, item.dataset.icon, item.dataset.title));
+  });
+
+  // ── Deep linking ──────────────────────────────────────────
+  const SLUG_MAP = {
+    'README':                       ['README.md',                             '🏠', 'Inicio'],
+    'HOJA_DE_RUTA':                 ['HOJA_DE_RUTA.md',                       '🗺', 'Hoja de Ruta'],
+    'DISE%C3%91O_API':              ['DISE%C3%91O_API.md',                     '⚙', 'Diseño API'],
+    'HALLAZGOS':                    ['HALLAZGOS.md',                           '🔍', 'Hallazgos'],
+    'EVALUACION_MATEMATICA':        ['EVALUACION_MATEMATICA.md',               '⚖', 'Evaluación Matemática'],
+    '00_fundamentos_matematicos':   ['docs/00_fundamentos_matematicos.md',     '∑', 'Fundamentos Matemáticos'],
+    '01_tensores':                  ['docs/01_tensores.md',                    '📐', 'Tensores'],
+    '02_gradientes_y_optimizacion': ['docs/02_gradientes_y_optimizacion.md',   '∇', 'Gradientes y Optimización'],
+    '03_redes_neuronales':          ['docs/03_redes_neuronales.md',            '🧠', 'Redes Neuronales'],
+    '04_mecanismo_de_atencion':     ['docs/04_mecanismo_de_atencion.md',       '👁', 'Mecanismo de Atención'],
+    '05_arquitectura_transformer':  ['docs/05_arquitectura_transformer.md',    '⚡', 'Arquitectura Transformer'],
+  };
+
+  function loadFromHash() {
+    const hash = location.hash.slice(1);
+    if (!hash) return;
+    const entry = SLUG_MAP[hash] || SLUG_MAP[decodeURIComponent(hash)];
+    if (entry) loadDoc(...entry);
+  }
+  loadFromHash();
+  window.addEventListener('hashchange', loadFromHash);
+</script>
+</body>
+</html>
