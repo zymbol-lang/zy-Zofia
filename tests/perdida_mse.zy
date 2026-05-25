@@ -1,0 +1,31 @@
+// @vm-skip
+// Test: MSE loss y su gradiente
+
+mse(pred, obj) {
+    _n = pred$#
+    suma = 0.0
+    @ i:1.._n {
+        dif = pred[i] - obj[i]
+        suma = suma + dif * dif
+    }
+    <~ suma / ##.(_n)
+}
+
+mse_grad(pred, obj) {
+    _n = pred$#
+    factor = 2.0 / ##.(_n)
+    g = []
+    @ i:1.._n { g = g$+ (factor * (pred[i] - obj[i])) }
+    <~ g
+}
+
+pred = [0.9, 0.2, 0.8]
+obj  = [1.0, 0.0, 1.0]
+
+perdida = mse(pred, obj)
+>> #.6|perdida| ¶
+
+grad = mse_grad(pred, obj)
+>> #.6|grad[1]| ¶
+>> #.6|grad[2]| ¶
+>> #.6|grad[3]| ¶

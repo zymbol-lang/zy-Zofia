@@ -1,0 +1,39 @@
+// @vm-skip
+// Test: multiplicación matricial general n×n
+
+produc_punto(a, b) {
+    _n = a$#
+    suma = 0.0
+    @ i:1.._n { suma = suma + a[i] * b[i] }
+    <~ suma
+}
+
+col_j(m, j) {
+    col = []
+    _filas = m$#
+    @ i:1.._filas { col = col$+ m[i>j] }
+    <~ col
+}
+
+producto_mat(A, B) {
+    _fils = A$#
+    _cols = B[1]$#
+    C = []
+    @ i:1.._fils {
+        fila_c = []
+        @ j:1.._cols {
+            fila_c = fila_c$+ produc_punto(A[i], col_j(B, j))
+        }
+        C = C$+ fila_c
+    }
+    <~ C
+}
+
+A = [[1.0, 2.0], [3.0, 4.0]]
+B = [[5.0, 6.0], [7.0, 8.0]]
+C = producto_mat(A, B)
+>> C ¶
+
+identidad = [[1.0, 0.0], [0.0, 1.0]]
+D = producto_mat(A, identidad)
+>> D ¶

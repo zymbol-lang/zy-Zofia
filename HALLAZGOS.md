@@ -30,9 +30,8 @@ interpreter/ROADMAP.md lo incorpora en v0.0.6
 Zymbol mejora → Zofía desbloquea la siguiente fase
 ```
 
-Zofía no puede avanzar más allá de la Fase 2 hasta que `std/math` llegue al
-lenguaje. Esa dependencia hace que Zofía sea el driver de v0.0.6, no un
-proyecto secundario.
+Con `std/math` y `std/random` implementados en v0.0.6, Zofía puede avanzar a
+las Fases 3–5 sin workarounds en Zymbol puro.
 
 ---
 
@@ -89,138 +88,119 @@ pero que Zymbol aún no implementa.
 
 | ID | Módulo | Capacidad ausente | Fase | Estado |
 |----|--------|-------------------|------|--------|
-| [GAP-Z001](#gap-z001--sin-funciones-matemáticas-trascendentes) | `activacion.zy`, `atencion.zy`, `transformador.zy` | `exp`, `log`, `sqrt`, `sin`, `cos`, `pow`, `abs` nativas | 3–5 | anticipado |
-| [GAP-Z002](#gap-z002--sin-constantes-matemáticas) | todos los módulos | `π` y `e` como constantes nativas o de biblioteca | 3 | anticipado |
-| [GAP-Z003](#gap-z003--sin-generación-de-números-aleatorios-nativa) | `transformador.zy` | Inicialización aleatoria de pesos sin BashExec por llamada | 5 | anticipado |
+| ~~[GAP-Z001](#gap-z001--sin-funciones-matemáticas-trascendentes)~~ | ~~`activacion.zy`, `atencion.zy`, `transformador.zy`~~ | ~~`exp`, `log`, `sqrt`, `sin`, `cos`, `pow`, `abs` nativas~~ | ~~3–5~~ | resuelto v0.0.6 |
+| ~~[GAP-Z002](#gap-z002--sin-constantes-matemáticas)~~ | ~~todos los módulos~~ | ~~`π` y `e` como constantes nativas o de biblioteca~~ | ~~3~~ | resuelto v0.0.6 |
+| ~~[GAP-Z003](#gap-z003--sin-generación-de-números-aleatorios-nativa)~~ | ~~`transformador.zy`~~ | ~~Inicialización aleatoria de pesos sin BashExec por llamada~~ | ~~5~~ | resuelto v0.0.6 |
 | ~~GAP-Z004~~ | ~~`tensor.zy`, todos~~ | ~~`0.33333333...` — sin control de decimales al imprimir~~ | ~~1~~ | resuelto v0.0.5 |
 | [GAP-Z005](#gap-z005--rendimiento-de-listas-anidadas-para-tensores) | `tensor.zy` | Acceso `lista[i][j]` es O(n) en listas de listas | 1 | anticipado |
+| ~~[GAP-Z006](#gap-z006--actualización-profunda-canónica-arrij-val)~~ | ~~`tensor.zy`, `grad.zy`~~ | ~~`arr[i>j]$~ val` — deep update consistente con la lectura profunda~~ | ~~1~~ | resuelto v0.0.6 |
+| ~~[GAP-Z007](#gap-z007--no-soporta-en-tuplas-nombradas)~~ | ~~`grad.zy`~~ | ~~`$~` no funciona sobre `Value::NamedTuple`~~ | ~~2~~ | resuelto v0.0.6 |
+| ~~[GAP-Z008](#gap-z008--inferencia-de-tipo-monomorfa-bloquea-funciones-numéricas-mixtas)~~ | ~~todos~~ | ~~Parámetros aritméticos fijados como `Int`; llamadas Float fallan~~ | ~~1~~ | resuelto v0.0.6 |
+| ~~[GAP-Z009](#gap-z009--funciones-nombradas-pierden-alias-de-módulo-al-pasarse-como-hof)~~ | ~~`activacion.zy`, `atencion.zy`~~ | ~~Función nombrada con `mat::fn` usada como HOF falla en runtime~~ | ~~3~~ | resuelto v0.0.6 |
 
 ---
 
-### GAP-Z001 · Sin funciones matemáticas trascendentes
+### ~~GAP-Z001~~ · Sin funciones matemáticas trascendentes — RESUELTO en v0.0.6
 
 - **Módulo:** `activacion.zy` (Fase 3), `atencion.zy` (Fase 4), `transformador.zy` (Fase 5)
-- **Capacidad ausente:** Funciones matemáticas que Zymbol no provee de forma nativa:
-  - `exp(x)` — exponencial natural `eˣ`; necesaria en `sigmoide`, `softmax`, `tanh`
-  - `log(x)` — logaritmo natural; necesario en `entropia_cruzada`
-  - `sqrt(x)` — raíz cuadrada; necesaria en `atencion_producto_punto` (`/ √dₖ`) y `normalizar_capa`
-  - `sin(x)` y `cos(x)` — seno y coseno; necesarios en `codificacion_posicional`
-  - `pow(base, exp)` — potencia; necesaria en `codificacion_posicional` (`10000^(2i/d)`)
-  - `abs(x)` — valor absoluto; necesario en varias normalizaciones
-- **Impacto por fase:**
-  ```
-  Fase 3: sigmoide = 1 / (1 + exp(-x))   -- necesita exp
-          softmax: e^xᵢ / Σ e^xⱼ         -- necesita exp
-          entropia_cruzada: log(pred)      -- necesita log
+- **Resolución:** Módulo `std/math` implementado en Rust nativo. Nombres en estándar
+  internacional (mismo que C, Python, Rust). Para nombres en español, usar el patrón
+  i18n de tres capas — ver adapter `modulos/matematica_std.zy` en Zofía.
 
-  Fase 4: atencion: QKᵀ / sqrt(dk)       -- necesita sqrt
-
-  Fase 5: LayerNorm: (x-μ) / sqrt(σ²+ε)  -- necesita sqrt
-          PE: sin(pos/10000^(2i/d))        -- necesita sin, cos, pow
-  ```
-- **Workaround elegido: implementación en Zymbol puro**
-  En lugar de depender de BashExec (lento, requiere shell), Zofía implementará
-  estas funciones en `modulos/matematica.zy` usando métodos numéricos clásicos:
-
-  ```
-  -- sqrt: método de Newton-Raphson (Newton's method)
-  -- Converge en ~10 iteraciones para precisión float
-  raiz_cuadrada(x):
-      est = x / 2.0
-      @ 10 veces:
-          est = (est + x / est) / 2.0
-      <~ est
-
-  -- exp: serie de Taylor truncada a 20 términos (Taylor series)
-  -- e^x = 1 + x + x²/2! + x³/3! + ...
-  exponencial(x):
-      suma = 1.0
-      termino = 1.0
-      @ n desde 1 hasta 20:
-          termino = termino * x / n
-          suma = suma + termino
-      <~ suma
-
-  -- sin: serie de Taylor (converge bien para |x| < 2π)
-  -- sin(x) = x - x³/3! + x⁵/5! - ...
-
-  -- log: via identidad log(x) = 2 * arctanh((x-1)/(x+1))
-  --      o log(x) = log(a) + (x-a)/a para x cercano a a conocido
-  ```
-
-  **Ventaja educativa:** implementar estas funciones desde cero enseña más sobre
-  análisis numérico que simplemente llamar `math.sqrt()`. Es coherente con la
-  filosofía de Zofía.
-
-- **Propuesta para Zymbol v0.0.6:**
-  Módulo estándar `std/matematica` que exporte estas funciones implementadas
-  en Rust (velocidad) con la misma API que la versión Zymbol puro:
   ```zymbol
-  <# std/matematica <= mat
+  <# std/math => mat
 
-  y = mat::raiz_cuadrada(x)
-  z = mat::exponencial(x)
-  p = mat::potencia(base, exp)
-  s = mat::seno(angulo)
-  c = mat::coseno(angulo)
-  v = mat::valor_absoluto(x)
+  mat::sqrt(x)          -- raíz cuadrada
+  mat::exp(x)           -- e^x
+  mat::ln(x)            -- logaritmo natural
+  mat::log(x)           -- logaritmo natural (alias de ln)
+  mat::log(x, base)     -- logaritmo en base arbitraria
+  mat::sin(x)           -- seno (radianes)
+  mat::cos(x)           -- coseno (radianes)
+  mat::pow(base, exp)   -- base^exp (Float)
+  mat::abs(x)           -- valor absoluto (Int→Int, Float→Float)
+  mat::max(a, b)        -- máximo de dos valores
+  mat::min(a, b)        -- mínimo de dos valores
+  mat::floor(x)         -- piso (entero inferior)
+  mat::ceil(x)          -- techo (entero superior)
+  mat::round(x)         -- redondeo al más cercano
   ```
-- **Estado:** anticipado — workaround en `modulos/matematica.zy` planificado para Fase 3
+
+  **Patrón i18n para Zofía** — `modulos/matematica_std.zy`:
+  ```zymbol
+  # matematica_std {
+      <# std/math => _mat
+      #> {
+          _mat::sqrt  => raiz
+          _mat::exp   => exp
+          _mat::ln    => ln
+          _mat::log   => log
+          _mat::pow   => pot
+          _mat::sin   => sen
+          _mat::cos   => cos
+          _mat::abs   => abs
+          _mat::max   => max
+          _mat::min   => min
+          _mat::floor => piso
+          _mat::ceil  => techo
+          _mat::round => redondear
+      }
+  }
+  ```
+
+  Consumer en Zofía:
+  ```zymbol
+  <# ./modulos/matematica_std => mat
+
+  sigmoide(x) { <~ 1.0 / (1.0 + mat::exp(-x)) }
+  softmax(vec) {
+      exps  = vec$> (v -> mat::exp(v))
+      total = exps$< (0.0, (acc, v) -> acc + v)
+      <~ exps$> (v -> v / total)
+  }
+  ```
+
+- **Int → Float promoción:** todos los argumentos `###` son promovidos a `##.`
+  automáticamente — `mat::sqrt(4)` devuelve `2.0`.
+- **Estado:** resuelto v0.0.6 — `std/math` operativo, tests en `interpreter/tests/stdlib/`
 
 ---
 
-### GAP-Z002 · Sin constantes matemáticas
+### ~~GAP-Z002~~ · Sin constantes matemáticas — RESUELTO en v0.0.6
 
 - **Módulo:** todos los módulos
-- **Capacidad ausente:** Las constantes `π` (pi ≈ 3.14159...) y `e` (euler ≈ 2.71828...)
-  no existen como literales ni como parte del lenguaje o stdlib.
-- **Uso en Zofía:**
-  - `codificacion_posicional` usa `π` implícitamente a través de `sin`/`cos`
-  - `exponencial` usa `e` como base
-  - `tanh` se puede expresar en términos de `e`
-- **Workaround:** Definir como constantes en `matematica.zy`:
+- **Resolución:** `std/math` exporta `PI` y `E` como constantes del módulo.
   ```zymbol
-  PI := 3.14159265358979323846
-  E  := 2.71828182845904523536
+  <# std/math => mat
+
+  area = mat.PI * radio * radio
+  base = mat.E
   ```
-  Esta es la solución definitiva — no requiere cambio en el lenguaje.
-- **Propuesta para Zymbol (opcional):** Si se implementa `std/matematica`, incluir
-  `mat::PI` y `mat::E` como constantes del módulo.
-- **Estado:** anticipado — workaround trivial, no bloquea ninguna fase
+  - `mat.PI` = `3.141592653589793`
+  - `mat.E`  = `2.718281828459045`
+- **Estado:** resuelto v0.0.6 — acceso mediante `alias.CONSTANTE` verificado
 
 ---
 
-### GAP-Z003 · Sin generación de números aleatorios nativa
+### ~~GAP-Z003~~ · Sin generación de números aleatorios nativa — RESUELTO en v0.0.6
 
 - **Módulo:** `transformador.zy` (inicialización de pesos)
-- **Capacidad ausente:** Igual que Serpiente GAP-002 (descartado en ese contexto).
-  Zofía necesita inicializar los pesos de proyección W_Q, W_K, W_V, W_O, W₁, W₂
-  con valores aleatorios pequeños al crear un `config_codificador`.
-- **Diferencia con Serpiente:** En Serpiente, el BashExec por tick era el problema.
-  En Zofía, la inicialización solo ocurre una vez al inicio — el costo de BashExec
-  es aceptable. Pero la dependencia de shell sigue siendo frágil.
-- **Workaround elegido:** El mismo LCG de `serpiente/logica.zy`, portado a
-  `modulos/matematica.zy` como función reutilizable:
+- **Resolución:** Módulo `std/random` implementado con xoshiro256++ (estado
+  thread-local, semilla automática desde `SystemTime`). Reemplaza el LCG manual
+  y elimina la dependencia de BashExec.
+
   ```zymbol
-  -- Linear Congruential Generator (Numerical Recipes)
-  -- (same constants as used in serpiente/logica.zy)
-  lcg_paso(semilla):
-      <~ (semilla * 1664525 + 1013904223) % 4294967296
+  <# std/random => rnd
 
-  aleatorio_rango(semilla, min, max):
-      sig = lcg_paso(semilla)
-      val = min + (sig % (max - min + 1))
-      <~ (val, sig)
-
-  -- Para pesos: valores pequeños en [-0.1, 0.1]
-  peso_aleatorio(semilla):
-      [entero, sig] = aleatorio_rango(semilla, -100, 100)
-      <~ (entero / 1000.0, sig)  -- rango [-0.1, 0.1]
+  rnd::entero(1, 6)    -- Int en [min, max]
+  rnd::rango(10)       -- Int en [0, n-1]
+  rnd::peso_f64()      -- Float en [-0.1, 0.1] para inicialización de pesos
   ```
-  La semilla inicial se obtiene una sola vez con BashExec (`date +%N`).
-- **Propuesta para Zymbol v0.0.6:** igual que Serpiente — función built-in
-  `rand(min, max)` o módulo `std/aleatorio`.
-- **Estado:** anticipado — workaround conocido reutilizado de Serpiente
+
+  `peso_f64()` reemplaza directamente el patrón `peso_aleatorio(semilla)` del LCG
+  de `modulos/matematica.zy`. No requiere pasar ni almacenar semilla.
+
+- **Estado:** resuelto v0.0.6 — xoshiro256++, tests en `interpreter/tests/stdlib/`
 
 ---
 
@@ -244,6 +224,112 @@ pero que Zymbol aún no implementa.
   s = "hi"  →  s#?  →  (##", 2, hi)
   ```
 - **Estado:** resuelto v0.0.5 — sin workaround necesario en Zofía
+
+---
+
+### ~~GAP-Z006~~ · Actualización profunda canónica `arr[i>j]$~ val` — RESUELTO en v0.0.6
+
+- **Módulo:** `tensor.zy`, `grad.zy`
+- **Descripción:** `arr[i>j]` es la sintaxis canónica de lectura profunda en Zymbol
+  (`arr[i][j]` está deprecado). Sin embargo, `$~` solo aceptaba `arr[i]` (un nivel),
+  obligando a encadenar para deep updates: `m = m[i]$~ (m[i][j]$~ val)` — verboso
+  e inconsistente con la sintaxis de lectura.
+- **Resolución:** El parser acepta `Expr::DeepIndex` como target de `$~`. El intérprete
+  evalúa todos los índices del path, desciende, y reconstruye de adentro hacia afuera.
+  ```zymbol
+  // Antes (forma encadenada — todavía válida):
+  m = m[1]$~ (m[1][2]$~ 99.0)
+
+  // Ahora (forma canónica — consistente con la lectura):
+  m = m[1>2]$~ 99.0
+
+  // Funciona a cualquier profundidad:
+  t = t[2>1>2]$~ 99.0
+  ```
+  Soporta `Array`, `Tuple` posicional y `NamedTuple` en cualquier nivel del path.
+- **Estado:** resuelto v0.0.6 — `parse_collection_update` + `deep_update_value` en `collection_ops.rs`
+
+---
+
+### ~~GAP-Z007~~ · `$~` no soporta tuplas nombradas — RESUELTO en v0.0.6
+
+- **Módulo:** `grad.zy`
+- **Descripción:** El operador de actualización funcional `$~` solo funcionaba con
+  `Value::Array` y `Value::Tuple` posicional. Intentar actualizar un campo de una
+  tupla nombrada producía `RuntimeError: cannot update NamedTuple`.
+  ```zymbol
+  // Falla en v0.0.5:
+  g = (nombre: "w1", valor: 1.5, grad: 0.0)
+  g2 = g[3]$~ 0.5     // ❌ RuntimeError
+  g3 = g["grad"]$~ 0.5  // ❌ RuntimeError
+  ```
+- **Impacto:** El módulo `grad` representa cada parámetro entrenable como tupla
+  nombrada. Sin este soporte, actualizar el campo `grad` requería reconstrucción
+  completa en cada paso de retropropagación.
+- **Resolución:** Nuevo arm `Value::NamedTuple` en `eval_collection_update`:
+  - `t[i]$~ val` — actualización por posición (1-based, índices negativos soportados)
+  - `t["campo"]$~ val` — actualización por nombre de campo
+  ```zymbol
+  g2 = g[3]$~ 0.5        // ✅ por posición
+  g3 = g["grad"]$~ 0.5   // ✅ por nombre de campo
+  ```
+  El original nunca se muta (inmutabilidad funcional).
+- **Estado:** resuelto v0.0.6 — `collection_ops.rs`, test en `tests/collections/named_tuple_update.zy`
+
+---
+
+### ~~GAP-Z008~~ · Inferencia de tipo monomorfa bloquea funciones numéricas mixtas — RESUELTO en v0.0.6
+
+- **Módulo:** todos
+- **Descripción:** El analizador semántico infería parámetros usados en aritmética
+  pura como `Int` (default). Llamadas posteriores con `Float` fallaban en la fase
+  semántica, antes de ejecutar.
+  ```zymbol
+  multiplicar(a, b) { <~ a * b }
+  >> multiplicar(3.0, 4.0)  // ❌ "argument 1 has type Float, but function expects Int"
+  ```
+  Esto afectaba `escalar_vec`, funciones de activación con argumento flotante, y
+  cualquier función matemática pura sin literales de tipo en el cuerpo.
+- **Resolución:** `TypeConstraint::Numeric.to_type()` ahora devuelve `ZymbolType::Float`
+  en lugar de `ZymbolType::Int`. Parámetros con evidencia de Int (comparación `n > 0`,
+  indexación `arr[n]`) siguen siendo `Exact(Int)` vía unify: `Numeric + CompatibleWith(Int) = Exact(Int)`.
+  ```zymbol
+  multiplicar(a, b) { <~ a * b }
+  >> multiplicar(3, 4)     // ✅ Int, Int
+  >> multiplicar(3.0, 4.0) // ✅ Float, Float
+  >> multiplicar(3, 4.0)   // ✅ Int, Float
+  ```
+- **Estado:** resuelto v0.0.6 — `zymbol-semantic/src/type_check.rs`, una línea
+
+---
+
+### ~~GAP-Z009~~ · Funciones nombradas pierden alias de módulo al pasarse como HOF — RESUELTO en v0.0.6
+
+- **Módulo:** `activacion.zy`, `atencion.zy`
+- **Descripción:** Una función nombrada que usa `mat::fn` internamente, al ser pasada
+  como valor de primera clase a otra función, fallaba con `"undefined module alias: 'mat'"`.
+  Las lambdas (`x -> mat::fn(x)`) no tenían este problema porque tomaban un fast path
+  que no limpiaba `import_aliases`.
+  ```zymbol
+  <# std/math => mat
+
+  sqrt_fn(x) { <~ mat::sqrt(x) }
+  aplicar(f, lista) { <~ lista $> v -> f(v) }
+
+  // Workaround necesario en v0.0.5:
+  resultado = aplicar(x -> mat::sqrt(x), lista)   // ✅ lambda inline
+  resultado = aplicar(sqrt_fn, lista)              // ❌ alias perdido
+  ```
+- **Causa raíz:** `take_call_state()` limpiaba `import_aliases`. Para lambdas
+  intermedias dentro de HOFs, esto borraba el contexto antes de que la función
+  nombrada pudiera usarlo. La solución via `saved.import_aliases` era insuficiente.
+- **Resolución:** `FunctionValue` tiene nuevo campo `module_aliases: HashMap<String, PathBuf>`
+  capturado en `func_def_to_value` (momento de definición). En `eval_lambda_call`,
+  se restauran desde el snapshot de la función, no del caller.
+  ```zymbol
+  resultado = aplicar(sqrt_fn, lista)   // ✅ funciona en v0.0.6
+  ```
+- **Estado:** resuelto v0.0.6 — `functions_lambda.rs` + campo en `FunctionValue` (lib.rs)
 
 ---
 
@@ -290,43 +376,19 @@ Mejoras inspiradas directamente en la experiencia de construir Zofía.
 
 | ID | Área | Resumen | Fase que la inspira | Estado |
 |----|------|---------|---------------------|--------|
-| [IDEA-Z001](#idea-z001--módulo-stdmatematica) | stdlib | `std/matematica`: exp, log, sqrt, sin, cos, pow, abs en Rust | 3–5 | propuesto |
+| ~~[IDEA-Z001](#idea-z001--módulo-stdmath)~~ | stdlib | ~~`std/math`: sqrt, exp, ln, sin, cos, pow, abs en Rust~~ | 3–5 | resuelto v0.0.6 |
 | [IDEA-Z002](#idea-z002--formato-de-punto-flotante-en-) | sintaxis | `>>` con control de decimales: `>> x :#4f` | 1 | propuesto |
-| [IDEA-Z003](#idea-z003--map-funcional-sobre-listas) | operadores | Aplicar función a cada elemento de lista: `lista $@ fn` | 1 | propuesto |
+| ~~[IDEA-Z003](#idea-z003--map-funcional-sobre-listas)~~ | operadores | ~~`lista $@ fn` — map funcional~~ | 1 | descartado |
 | [IDEA-Z004](#idea-z004--input-tipado-con-restricciones) | sintaxis | `<< :###4` — restricción de tipo y longitud en el operador de lectura | cualquiera | propuesto |
 
 ---
 
-### IDEA-Z001 · Módulo `std/matematica`
+### ~~IDEA-Z001~~ · Módulo `std/math` — RESUELTO en v0.0.6
 
-- **Área:** stdlib
-- **Motivación:** Zofía necesita exp, log, sqrt, sin, cos, pow, abs para implementar
-  las activaciones, la atención y el positional encoding. Actualmente se implementarán
-  en Zymbol puro en `modulos/matematica.zy` — funcional pero más lento que una
-  implementación nativa.
-- **Propuesta:** Módulo estándar `std/matematica` implementado en Rust (como wrapper
-  de `f64::sqrt()`, `f64::exp()`, etc.) con API en español:
-  ```zymbol
-  <# std/matematica <= mat
-
-  mat::raiz_cuadrada(x)       -- sqrt
-  mat::exponencial(x)         -- exp
-  mat::logaritmo(x)           -- ln
-  mat::logaritmo_base(x, b)   -- log_b(x)
-  mat::potencia(base, exp)    -- base^exp
-  mat::seno(x)                -- sin (radianes)
-  mat::coseno(x)              -- cos (radianes)
-  mat::valor_absoluto(x)      -- |x|
-  mat::maxn(a, b)             -- max(a, b) para escalares
-  mat::minn(a, b)             -- min(a, b) para escalares
-  mat::PI                     -- 3.14159265...
-  mat::E                      -- 2.71828182...
-  ```
-- **Impacto:** Cualquier programa Zymbol científico o financiero se beneficia.
-  Elimina la necesidad de BashExec para cálculos numéricos.
-- **Esfuerzo estimado:** Bajo — son wrappers de funciones de la biblioteca estándar
-  de Rust, sin nueva semántica en el lenguaje.
-- **Estado:** propuesto para Zymbol v0.0.6
+- **Resolución:** Implementado como `std/math` con nombres estándar internacionales.
+  Ver [GAP-Z001 resuelto](#gap-z001--sin-funciones-matemáticas-trascendentes--resuelto-en-v006)
+  para la API completa y el patrón i18n.
+- **Estado:** resuelto v0.0.6
 
 ---
 
@@ -342,38 +404,25 @@ Mejoras inspiradas directamente en la experiencia de construir Zofía.
   >> x :#0f ¶        -- entero: "0"
   ```
   El `:#Nf` sería un token de formato, no un operador de aritmética.
-  Alternativa como función en `std/matematica`: `mat::formatear(x, 4)` → string.
+  Alternativa como función en `std/math`: `mat::round(x * 1e4) / 1e4` o usar
+  el operador existente `#.4|x|` (ya disponible en v0.0.5).
 - **Impacto:** Mejora inmediata en la legibilidad de cualquier programa numérico.
-- **Estado:** propuesto para Zymbol v0.0.6
+- **Estado:** propuesto para Zymbol v0.0.7 — workaround: `#.4|x|` ya disponible
 
 ---
 
-### IDEA-Z003 · Map funcional sobre listas (`$@`)
+### ~~IDEA-Z003~~ · Map funcional sobre listas (`$@`) — DESCARTADO
 
-- **Área:** operadores de colección
-- **Motivación:** En `tensor.zy`, muchas operaciones aplican la misma función a cada
-  elemento. Actualmente requieren un loop explícito:
+- **Motivo del descarte:** El operador `$>` ya existe en Zymbol y hace exactamente
+  lo que `$@` proponía:
   ```zymbol
-  -- Aplicar ReLU a cada elemento de un vector
-  resultado = []
-  @ x en vec {
-      resultado = resultado $+[1] relu_escalar(x)
-  }
+  resultado = vec$> relu_escalar          -- referencia a función nombrada
+  resultado = vec$> (v -> mat::exp(v))    -- lambda inline
+  exps = vec$> (v -> mat::exp(v))         -- softmax step 1
   ```
-  Con un operador map:
-  ```zymbol
-  resultado = vec $@ relu_escalar    -- cada elemento pasa por relu_escalar
-  ```
-- **Coherencia con el lenguaje:** Zymbol usa `$` como prefijo de todos los operadores
-  de colección (`$+`, `$-`, `$*`, `$?`, `$#`, etc.). `$@` sería el map funcional —
-  `@` ya evoca "para cada" en el lenguaje (bucles).
-- **Propuesta:** `coleccion $@ funcion` aplica `funcion(elemento)` a cada elemento
-  y devuelve la lista resultante. Para funciones con argumentos adicionales:
-  `coleccion $@ (fn, arg1, arg2)`.
-- **Impacto:** Elimina boilerplate en `activacion.zy` (relu, sigmoide, tanh elemento
-  a elemento), en `tensor.zy` (sumar_escalar, multiplicar_escalar) y en cualquier
-  módulo que transforme colecciones.
-- **Estado:** propuesto para Zymbol v0.0.6
+  Añadir `$@` sería sintaxis duplicada sin beneficio. Los ejemplos de Zofía
+  (`sigmoide`, `softmax`, `relu` elemento a elemento) funcionan con `$>`.
+- **Estado:** descartado — redundante con `$>`
 
 ---
 
@@ -397,19 +446,19 @@ Mejoras inspiradas directamente en la experiencia de construir Zofía.
 - **Coherencia:** Usa `###` (entero), `##.` (decimal), `##"` (texto) — notación
   ya establecida en Zymbol para tipos. El `+` para positivo. El número final para
   longitud máxima. Sin letras de idioma.
-- **Estado:** propuesto para Zymbol v0.0.6
+- **Estado:** propuesto para Zymbol v0.0.7
 
 ---
 
 ## Resumen de estado
 
-| Categoría | Total | Anticipados | Abiertos | Workaround | Propuestos | Resueltos |
-|-----------|-------|-------------|----------|------------|------------|-----------|
-| BUG | 0 | 0 | 0 | 0 | 0 | 0 |
-| GAP | 5 | 4 | 0 | 0 | 0 | 1 |
-| ERROR | 0 | 0 | 0 | 0 | 0 | 0 |
-| IDEA | 4 | 0 | 0 | 0 | 4 | 0 |
-| **Total** | **9** | **4** | **0** | **0** | **4** | **1** |
+| Categoría | Total | Anticipados | Abiertos | Workaround | Propuestos | Resueltos | Descartados |
+|-----------|-------|-------------|----------|------------|------------|-----------|-------------|
+| BUG | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| GAP | 9 | 1 | 0 | 0 | 0 | 8 | 0 |
+| ERROR | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| IDEA | 4 | 0 | 0 | 0 | 2 | 1 | 1 |
+| **Total** | **13** | **1** | **0** | **0** | **2** | **9** | **1** |
 
 ---
 
@@ -417,14 +466,18 @@ Mejoras inspiradas directamente en la experiencia de construir Zofía.
 
 Los GAPs e IDEAs de Zofía, agrupados por área de cambio en el lenguaje:
 
-| Área Zymbol | Items | Prioridad |
-|-------------|-------|-----------|
-| `std/matematica` (nueva biblioteca) | GAP-Z001, GAP-Z002, IDEA-Z001 | Alta — desbloquea Fases 3-5 |
-| Formato numérico en `>>` | ~~GAP-Z004~~, IDEA-Z002 | Media — `#.###\|x\|` ya cubre el caso; IDEA-Z002 es mejora adicional |
-| Operadores de colección | IDEA-Z003 (`$@` map) | Media — elimina boilerplate |
-| Input tipado | IDEA-Z004 | Baja — solo demos interactivas |
-| `std/aleatorio` | GAP-Z003 | Baja — LCG es workaround suficiente |
-| Tipo `Tensor` nativo en VM | GAP-Z005 | Largo plazo — no bloquea Zofía v1 |
+| Área Zymbol | Items | Estado |
+|-------------|-------|--------|
+| `std/math` (nueva biblioteca) | GAP-Z001, GAP-Z002, IDEA-Z001 | ✅ resuelto v0.0.6 |
+| `std/random` | GAP-Z003 | ✅ resuelto v0.0.6 |
+| Formato numérico en `>>` | ~~GAP-Z004~~, IDEA-Z002 | `#.###\|x\|` cubre el caso; IDEA-Z002 → v0.0.7 |
+| Operadores de colección | ~~IDEA-Z003~~ (`$@` map) | descartado — `$>` ya cubre |
+| Input tipado | IDEA-Z004 | propuesto v0.0.7 |
+| `$~` deep update canónico | GAP-Z006 | ✅ resuelto v0.0.6 — `arr[i>j]$~ val` |
+| `$~` para tuplas nombradas | GAP-Z007 | ✅ resuelto v0.0.6 — por posición y por nombre |
+| Inferencia numérica polimórfica | GAP-Z008 | ✅ resuelto v0.0.6 — `Numeric → Float` default |
+| HOF aliases en funciones nombradas | GAP-Z009 | ✅ resuelto v0.0.6 — `module_aliases` en `FunctionValue` |
+| Tipo `Tensor` nativo en VM | GAP-Z005 | largo plazo — no bloquea Zofía v1 |
 
 ---
 
@@ -433,3 +486,12 @@ Los GAPs e IDEAs de Zofía, agrupados por área de cambio en el lenguaje:
 | ID | Título | Resuelto en | Cómo |
 |----|--------|-------------|------|
 | GAP-Z004 | Sin formato de punto flotante | v0.0.5 | `#.###\|x\|` redondea, `#!###\|x\|` trunca — verificado 2026-05-23 |
+| GAP-Z001 | Sin funciones matemáticas trascendentes | v0.0.6 | `std/math`: `sqrt exp ln log pow sin cos tan tanh sinh cosh sigmoid asin acos atan atan2 abs max min floor ceil round` |
+| GAP-Z002 | Sin constantes matemáticas | v0.0.6 | `std/math` exporta `PI` y `E`; acceso: `mat.PI`, `mat.E` |
+| GAP-Z003 | Sin generación de números aleatorios nativa | v0.0.6 | `std/random`: xoshiro256++ thread-local; `entero rango peso_f64` |
+| IDEA-Z001 | Módulo `std/math` | v0.0.6 | Implementado con nombres estándar internacionales + patrón i18n |
+| IDEA-Z003 | Map funcional `$@` | — | Descartado — `$>` ya hace exactamente lo mismo |
+| GAP-Z006 | Deep update canónico `arr[i>j]$~ val` | v0.0.6 | Parser acepta `DeepIndex` como target; `deep_update_value` recursiva en `collection_ops.rs` |
+| GAP-Z007 | `$~` en tuplas nombradas | v0.0.6 | Nuevo arm `Value::NamedTuple` en `eval_collection_update`; soporta índice entero y nombre de campo |
+| GAP-Z008 | Inferencia monomorfa bloquea funciones numéricas | v0.0.6 | `TypeConstraint::Numeric.to_type()` devuelve `Float` — `Int → Float` sigue siendo compatible |
+| GAP-Z009 | HOF aliases en funciones nombradas | v0.0.6 | Campo `module_aliases` en `FunctionValue` capturado en definición; restaurado en `eval_lambda_call` |

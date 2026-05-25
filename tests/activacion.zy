@@ -1,0 +1,21 @@
+// @vm-skip
+// Test: funciones de activación usando std/math nativo (G3 implementado)
+
+<# std/math => mat
+
+relu(x) {
+    ? (x >= 0.0) { <~ x }
+    <~ 0.0
+}
+
+>> relu(2.0) ¶
+>> relu(0.0) ¶
+>> relu(-3.0) ¶
+
+>> mat::tanh(0) ¶
+>> #.6|mat::tanh(1)| ¶
+>> #.6|mat::tanh(-1)| ¶
+
+>> mat::sigmoid(0) ¶
+>> #.6|mat::sigmoid(2)| ¶
+>> #.6|mat::sigmoid(-2)| ¶

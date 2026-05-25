@@ -1,0 +1,36 @@
+// @vm-skip
+// Test: operaciones elemento a elemento sobre tensores (vectores)
+
+sumar_vec(a, b) {
+    _largo = a$#
+    c = []
+    @ i:1.._largo { c = c$+ (a[i] + b[i]) }
+    <~ c
+}
+
+restar_vec(a, b) {
+    _largo = a$#
+    c = []
+    @ i:1.._largo { c = c$+ (a[i] - b[i]) }
+    <~ c
+}
+
+escalar_vec(v, s) {
+    <~ v $> x -> x * s
+}
+
+dot(a, b) {
+    _n = a$#
+    suma = 0.0
+    @ i:1.._n { suma = suma + a[i] * b[i] }
+    <~ suma
+}
+
+a = [1.0, 2.0, 3.0]
+b = [4.0, 5.0, 6.0]
+
+>> sumar_vec(a, b) ¶
+>> restar_vec(b, a) ¶
+>> escalar_vec(a, 2.0) ¶
+>> escalar_vec(b, 0.5) ¶
+>> dot(a, b) ¶

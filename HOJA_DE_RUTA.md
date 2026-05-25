@@ -14,33 +14,68 @@ de Zymbol v0.0.6.
 
 ## Prerequisitos de Zymbol por fase
 
-| Fase | Zymbol actual | GAPs que bloquean | Workaround |
-|------|---------------|-------------------|------------|
-| Fase 1 — tensor | ✓ listas, aritmética, loops | GAP-Z004 (formato float) | `formatear(x,4)` en `matematica.zy` |
-| Fase 2 — grad | ✓ todo lo de Fase 1 | — | — |
-| Fase 3 — activacion | ✓ todo lo anterior | **GAP-Z001** (exp, log) | implementar en `matematica.zy` (Taylor) |
-| Fase 4 — atencion | ✓ todo lo anterior | **GAP-Z001** (sqrt) | idem |
-| Fase 5 — transformador | ✓ todo lo anterior | **GAP-Z001** (sin, cos, pow), GAP-Z003 (aleatorio) | idem + LCG de Serpiente |
+> **Actualización v0.0.6 (2026-05-24):** todos los GAPs identificados en la Fase 0
+> fueron resueltos durante el análisis empírico. No se requiere ningún módulo de
+> workaround matemático — `std/math` y `std/random` cubren el 100% de las necesidades.
 
-**Conclusión:** La Fase 1 y la Fase 2 pueden arrancar con Zymbol tal como está.
-A partir de la Fase 3 se requiere `modulos/matematica.zy` con las implementaciones
-en puro Zymbol (Newton-Raphson para sqrt, Taylor para exp/sin/cos).
+| Fase | Prerequisitos Zymbol | GAPs | Estado |
+|------|----------------------|------|--------|
+| Fase 1 — tensor | listas, aritmética, loops, `$~` profundo | — | ✅ Zymbol v0.0.6 listo |
+| Fase 2 — grad | todo lo anterior + `$~` en named tuples | — | ✅ Zymbol v0.0.6 listo |
+| Fase 3 — activacion | todo lo anterior + `mat::tanh`, `mat::sigmoid` | — | ✅ Zymbol v0.0.6 listo |
+| Fase 4 — atencion | todo lo anterior + `mat::sqrt`, `mat::exp` | — | ✅ Zymbol v0.0.6 listo |
+| Fase 5 — transformador | todo lo anterior + `mat::sin`, `mat::cos`, `mat.PI`, `std/random` | — | ✅ Zymbol v0.0.6 listo |
+
+**Todas las fases pueden implementarse con `<# std/math => mat` directamente.**
+El módulo de workaround `modulos/matematica.zy` ya no es necesario.
 
 ---
 
-## Fase 0 — Diseño completo (actual)
+## Fase 0 — Diseño y análisis de brechas ✅ COMPLETO
 
-**Objetivo:** documentar todos los conceptos antes de codificar.
+**Objetivo:** documentar todos los conceptos antes de codificar e identificar
+empíricamente qué capacidades de Zymbol son necesarias para Zofia.
+
+### Documentos de diseño
 
 | Documento | Estado |
 |-----------|--------|
-| `docs/00_fundamentos_matematicos.md` | Completo |
-| `docs/01_tensores.md` | Completo |
-| `docs/02_gradientes_y_optimizacion.md` | Completo |
-| `docs/03_redes_neuronales.md` | Completo |
-| `docs/04_mecanismo_de_atencion.md` | Completo |
-| `docs/05_arquitectura_transformer.md` | Completo |
-| `DISEÑO_API.md` | Completo |
+| `docs/00_fundamentos_matematicos.md` | ✅ Completo |
+| `docs/01_tensores.md` | ✅ Completo |
+| `docs/02_gradientes_y_optimizacion.md` | ✅ Completo |
+| `docs/03_redes_neuronales.md` | ✅ Completo |
+| `docs/04_mecanismo_de_atencion.md` | ✅ Completo |
+| `docs/05_arquitectura_transformer.md` | ✅ Completo |
+| `DISEÑO_API.md` | ✅ Completo |
+| `ANALISIS_FASE0.md` | ✅ Completo — análisis empírico de 5 gaps, todos resueltos |
+| `EVALUACION_MATEMATICA.md` | ✅ Actualizado a v0.0.6 — cobertura 100% |
+| `HALLAZGOS.md` | ✅ Actualizado — GAP-Z001 a Z009 todos resueltos |
+
+### Tests de validación (`tests/`)
+
+Seis pares de archivos `.zy` / `.expected` que verifican empíricamente las
+capacidades de Zymbol necesarias para Zofia. Todos en verde con Zymbol v0.0.6.
+
+| Test | Qué verifica | Estado |
+|------|-------------|--------|
+| `tensor_basico.zy` | Creación de matrices, acceso `m[i>j]`, deep update `m[i>j]$~ val` | ✅ PASS |
+| `tensor_ops.zy` | `sumar_vec`, `restar_vec`, `escalar_vec`, `dot` con `$>` / `$<` | ✅ PASS |
+| `matmul.zy` | Multiplicación matricial general `[2×2] × [2×2]` | ✅ PASS |
+| `activacion.zy` | `relu`, `mat::tanh`, `mat::sigmoid` nativos de `std/math` | ✅ PASS |
+| `perdida_mse.zy` | MSE y gradiente de pérdida con funciones aritméticas mixtas | ✅ PASS |
+| `forward_pass.zy` | Forward pass de 2 capas con `proyectar` + activaciones HOF | ✅ PASS |
+
+### Gaps del lenguaje identificados y resueltos
+
+| Gap | Descripción | Estado |
+|-----|-------------|--------|
+| G1 (GAP-Z006) | `arr[i>j]$~ val` — deep update canónico | ✅ Resuelto v0.0.6 |
+| G2 (GAP-Z007) | `$~` en tuplas nombradas por posición y nombre | ✅ Resuelto v0.0.6 |
+| G3 (GAP-Z001) | `tanh`, `sigmoid`, `tan`, `asin`/`acos`/`atan`, `sinh`/`cosh` en `std/math` | ✅ Resuelto v0.0.6 |
+| G4 (GAP-Z008) | Inferencia numérica monomorfa — funciones aritméticas bloqueaban Float | ✅ Resuelto v0.0.6 |
+| G7 (GAP-Z009) | Funciones nombradas como HOF perdían aliases de módulo | ✅ Resuelto v0.0.6 |
+
+**La Fase 1 puede comenzar.**
 
 ---
 
