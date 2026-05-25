@@ -1,0 +1,20 @@
+// Test: descenso de gradiente escalar sobre f(x) = x²
+// Verifica: módulo grad.zy, variable, asignar_grad, paso_gradiente
+// Criterio: la pérdida en el paso 20 es < 0.01 (convergencia confirmada)
+
+<# ../modulos/grad => grad
+
+x_var = grad::variable(5.0, "x")
+tasa  = 0.1
+
+@ _paso:1..25 {
+    x     = x_var.valor
+    g     = 2.0 * x
+    x_var = grad::asignar_grad(x_var, g)
+    x_var = grad::paso_gradiente(x_var, tasa)
+}
+
+// Después de 25 pasos x ≈ 0.0235 → pérdida ≈ 0.00055
+>> "convergido: " >> (x_var.valor * x_var.valor < 0.001) ¶
+>> "valor negativo: " >> (x_var.valor < 0.0) ¶
+>> "grad reseteado: " >> (x_var.grad == 0.0) ¶

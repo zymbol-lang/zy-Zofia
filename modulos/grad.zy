@@ -1,0 +1,85 @@
+# grad {
+    #> {
+        variable
+        gradiente_de
+        asignar_grad
+        reiniciar_grad
+        paso_gradiente
+        reiniciar_gradientes
+        paso_gradiente_lista
+        mse
+        gradiente_mse
+        imprimir_var
+    }
+
+    variable(valor, nombre) {
+        // Crea una variable escalar con acumulador de gradiente
+        // Source: Baydin et al. (2018), Automatic Differentiation in ML
+        <~ (valor: valor, grad: 0.0, nombre: nombre)
+    }
+
+    gradiente_de(v) {
+        // Returns the current accumulated gradient
+        <~ v.grad
+    }
+
+    asignar_grad(v, g) {
+        // Returns variable with gradient set to g
+        <~ v["grad"]$~ g
+    }
+
+    reiniciar_grad(v) {
+        // Zero-grad: clears gradient before next forward pass
+        <~ v["grad"]$~ 0.0
+    }
+
+    paso_gradiente(v, tasa) {
+        // SGD step: w ← w - α × ∂L/∂w, then zero grad
+        // Source: Ruder (2016), An Overview of Gradient Descent Optimization Algorithms
+        nuevo = v.valor - tasa * v.grad
+        v2 = v["valor"]$~ nuevo
+        <~ v2["grad"]$~ 0.0
+    }
+
+    reiniciar_gradientes(vars) {
+        // Zero-grad for a list of variables (antes de cada forward pass)
+        res = []
+        @ v:vars { res = res$+ reiniciar_grad(v) }
+        <~ res
+    }
+
+    paso_gradiente_lista(vars, tasa) {
+        // SGD step applied to a list of variables
+        res = []
+        @ v:vars { res = res$+ paso_gradiente(v, tasa) }
+        <~ res
+    }
+
+    mse(y_pred, y_real) {
+        // Mean squared error: (1/n) × Σ(ŷᵢ - yᵢ)²
+        // Source: standard regression loss, always non-negative
+        n = y_pred$#
+        suma = 0.0
+        @ i:1..n {
+            diff = y_pred[i] - y_real[i]
+            suma = suma + diff * diff
+        }
+        <~ suma / ##.(n)
+    }
+
+    gradiente_mse(y_pred, y_real) {
+        // Gradient of MSE w.r.t. predictions: (2/n) × (ŷᵢ - yᵢ)
+        // Source: ∂MSE/∂ŷᵢ = (2/n)(ŷᵢ - yᵢ)
+        n = y_pred$#
+        factor = 2.0 / ##.(n)
+        g = []
+        @ i:1..n {
+            g = g$+ (factor * (y_pred[i] - y_real[i]))
+        }
+        <~ g
+    }
+
+    imprimir_var(v) {
+        >> v.nombre >> ": " >> v.valor >> " (grad: " >> v.grad >> ")" ¶
+    }
+}

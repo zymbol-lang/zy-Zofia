@@ -1,0 +1,17 @@
+// Test: mse y gradiente_mse del módulo grad
+<# ../modulos/grad => grad
+
+y_pred = [2.5, 3.0, 1.0]
+y_real = [3.0, 3.0, 0.5]
+
+// MSE = ((0.5)² + 0 + (0.5)²) / 3 = 0.5/3 ≈ 0.1667
+perdida = grad::mse(y_pred, y_real)
+>> #.4|perdida| ¶
+
+// Gradiente MSE = (2/3) × (y_pred - y_real)
+// = [(2/3)(2.5-3.0), (2/3)(3.0-3.0), (2/3)(1.0-0.5)]
+// = [-0.3333, 0.0, 0.3333]
+g = grad::gradiente_mse(y_pred, y_real)
+>> #.4|g[1]| ¶
+>> #.4|g[2]| ¶
+>> #.4|g[3]| ¶

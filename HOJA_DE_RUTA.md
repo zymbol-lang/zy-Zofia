@@ -117,27 +117,37 @@ imprimir          -- (tensor) → ninguno
 
 ---
 
-## Fase 2 — Módulo Gradiente (`modulos/grad.zy`)
+## Fase 2 — Módulo Gradiente (`modulos/grad.zy`) ✅ COMPLETO
 
-**Qué se construye:** sistema de variables con seguimiento de gradiente
-y retropropagación manual por regla de la cadena.
+**Qué se construye:** variables escalares con seguimiento de gradiente
+y descenso de gradiente manual (SGD).
 
-**Funciones a implementar:**
+**Funciones implementadas:**
 
 ```
-variable          -- (valor, nombre) → variable_con_grad
-hacia_adelante    -- (expresion) → valor
-retropropagar     -- (variable_perdida) → ninguno   [backpropagation]
-gradiente_de      -- (variable) → tensor
-paso_gradiente    -- (variables, tasa) → ninguno    [gradient step]
-mse               -- (prediccion, objetivo) → escalar [mean squared error]
+variable          -- (valor, nombre) → (valor: v, grad: 0.0, nombre: n)
+gradiente_de      -- (v) → grad actual
+asignar_grad      -- (v, g) → variable con grad = g
+reiniciar_grad    -- (v) → variable con grad = 0.0
+paso_gradiente    -- (v, tasa) → variable actualizada: w ← w - α × grad
+reiniciar_gradientes -- (vars) → lista de variables con grad = 0.0
+paso_gradiente_lista -- (vars, tasa) → lista de variables actualizadas
+mse               -- (y_pred, y_real) → escalar (1/n) × Σ(ŷ - y)²
+gradiente_mse     -- (y_pred, y_real) → vector (2/n) × (ŷ - y)
+imprimir_var      -- (v) → ninguno (display)
 ```
 
-**Ejemplos al completar:**
-- `03_descenso_gradiente.zy` — encontrar el mínimo de f(x) = x² con gradiente
+**Ejemplos:**
+- `03_descenso_gradiente.zy` ✅ — mínimo de f(x) = x² convergido en < 41 pasos
 
-**Criterio de aceptación:** converger al mínimo de una función cuadrática
-en menos de 100 pasos con tasa de aprendizaje 0.1.
+**Criterio de aceptación:** ✅ Converge al mínimo de x² en < 100 pasos con
+tasa 0.1 (verificado 2026-05-25, TW y VM, x₄₁ ≈ 6.65×10⁻⁴).
+
+**Notas de implementación:**
+- `variable_con_grad` es una tupla nombrada `(valor, grad, nombre)` (inmutable)
+- `$~` por nombre de campo devuelve tupla nueva; el llamador reasigna
+- No hay grafo computacional — los gradientes se calculan manualmente
+- `mse`/`gradiente_mse` operan sobre vectores (listas de escalares)
 
 ---
 

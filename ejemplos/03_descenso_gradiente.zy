@@ -1,0 +1,27 @@
+// Fase 2: descenso de gradiente sobre f(x) = x²
+// Demuestra que el gradiente converge al mínimo (x = 0) desde x_inicial = 5.0
+// Criterio: convergencia en < 100 pasos con tasa = 0.1
+
+<# ../modulos/grad => grad
+
+x_var = grad::variable(5.0, "x")
+tasa  = 0.1
+_pasos = 50
+
+>> "Descenso de gradiente — f(x) = x²" ¶
+>> "tasa de aprendizaje: " >> tasa ¶
+>> "────────────────────────────────────" ¶
+
+@ paso:1.._pasos {
+    x       = x_var.valor
+    perdida = x * x
+    g       = 2.0 * x           // ∂(x²)/∂x = 2x
+
+    x_var = grad::asignar_grad(x_var, g)
+    x_var = grad::paso_gradiente(x_var, tasa)
+
+    >> "paso " >> paso >> ":  x = " >> #.6|x| >> "  pérdida = " >> #.6|perdida| ¶
+}
+
+>> "────────────────────────────────────" ¶
+>> "Valor final de x: " >> x_var.valor ¶
