@@ -77,7 +77,7 @@ específicas encontradas durante la construcción de Zofía.
 
 | ID | Módulo | Contexto | Estado |
 |----|--------|----------|--------|
-| [BUG-Z001](#bug-z001--vm-aritmética-int-falla-con-flotantes-de-arreglos) | todos los módulos | Aritmética `+`, `-`, `*`, `/` sobre elementos de arreglos Float en el VM | resuelto v0.0.6 |
+| [BUG-Z001](#bug-z001--vm-aritmética-int-falla-con-flotantes-de-arreglos) | todos los módulos | Aritmética `+`, `-`, `*`, `/` sobre elementos de arreglos Float en el VM | ✅ resuelto v0.0.6 |
 
 ---
 
@@ -476,11 +476,11 @@ Mejoras inspiradas directamente en la experiencia de construir Zofía.
 
 | Categoría | Total | Anticipados | Abiertos | Workaround | Propuestos | Resueltos | Descartados |
 |-----------|-------|-------------|----------|------------|------------|-----------|-------------|
-| BUG | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| BUG | 1 | 0 | 0 | 0 | 0 | 1 | 0 |
 | GAP | 9 | 1 | 0 | 0 | 0 | 8 | 0 |
 | ERROR | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | IDEA | 4 | 0 | 0 | 0 | 2 | 1 | 1 |
-| **Total** | **13** | **1** | **0** | **0** | **2** | **9** | **1** |
+| **Total** | **14** | **1** | **0** | **0** | **2** | **10** | **1** |
 
 ---
 

@@ -207,45 +207,53 @@ Cada capa puede capturar patrones de diferente nivel de abstracción:
 
 | Hiperparámetro | Símbolo | Original | Zofía (mínimo) |
 |----------------|---------|----------|-----------------|
-| Dimensión del modelo | dim_modelo | 512 | 8 |
+| Dimensión del modelo | dim_modelo | 512 | 4 |
 | Número de cabezas | num_cabezas | 8 | 2 |
 | Capas del encoder | num_capas | 6 | 2 |
-| Dimensión feed-forward | dim_ff | 2048 | 32 |
-| Longitud máx. secuencia | max_seq | 512 | 10 |
+| Dimensión feed-forward | dim_ff | 2048 | 8 |
+| Longitud máx. secuencia | max_seq | 512 | 5 |
 
 Zofía usa valores mínimos para que los ejemplos sean ejecutables sin hardware
-especializado y los tensores sean inspeccionables visualmente.
+especializado y los tensores sean inspeccionables visualmente. El ejemplo
+`06_transformer_encoder.zy` usa exactamente estos valores mínimos.
 
 ---
 
 ## Flujo completo con una oración
 
-Procesando ["El", "banco", "deposita"] con dim_modelo=8, 2 cabezas, 2 capas:
+Procesando ["El", "banco", "deposita", "allí", "dinero"] con dim_modelo=4, 2 cabezas, 2 capas
+(valores del ejemplo `06_transformer_encoder.zy`):
 
 ```
-1. Tokens → índices: [0, 1, 2]
+1. Tokens → embeddings manuales:
+   → matriz [5, 4]   (5 tokens, embedding dim=4)
 
-2. Lookup en tabla de embeddings:
-   → matriz [3, 8]   (3 tokens, embedding dim=8)
+2. + Codificación posicional sinusoidal:
+   → matriz [5, 4]   (misma forma, información de posición añadida)
 
-3. + Codificación posicional:
-   → matriz [3, 8]   (misma forma, información de posición añadida)
+3. CAPA 1 del codificador:
+   a. Q = entrada × W_Q [4×4] → [5, 4]
+      K = entrada × W_K [4×4] → [5, 4]
+      V = entrada × W_V [4×4] → [5, 4]
+   b. Atención multi-cabeza (2 cabezas de dim 2 cada una) → [5, 4]
+   c. + residual → [5, 4]   + LayerNorm(γ₁, β₁) → [5, 4]
+   d. FAD: [5,4] → [5,8] → [5,4]   (ReLU en la capa oculta)
+   e. + residual → [5, 4]   + LayerNorm(γ₂, β₂) → [5, 4]
 
-4. CAPA 1 del encoder:
-   a. Q = entrada × W_Q [8×8] → [3, 8]
-      K = entrada × W_K [8×8] → [3, 8]
-      V = entrada × W_V [8×8] → [3, 8]
-   b. Multi-head attention (2 cabezas de dim 4 cada una) → [3, 8]
-   c. + residual + LayerNorm → [3, 8]
-   d. FFN: [3,8] → [3,32] → [3,8]
-   e. + residual + LayerNorm → [3, 8]
+4. CAPA 2 del codificador:
+   (igual que capa 1, con pesos distintos) → [5, 4]
 
-5. CAPA 2 del encoder:
-   (igual que capa 1, con pesos distintos) → [3, 8]
-
-6. Salida final: matriz [3, 8]
+5. Salida final: matriz [5, 4]
    → representación contextual de cada token
-   → "banco" ahora tiene información de "El" y "deposita" en su vector
+   → cada fila tiene la misma dimensión que la entrada: encoder preserva forma
+```
+
+**Verificación del criterio (Fase 5):**
+```
+Tokens entrada: 5   dim_modelo: 4
+Tokens salida:  5   dim salida:  4
+✓ Número de tokens preservado (5)
+✓ Dimensión del modelo preservada (4)
 ```
 
 ---
@@ -261,6 +269,51 @@ en una tarea concreta, se agrega una "cabeza de tarea" encima:
 
 Zofía no implementa la cabeza de tarea (está fuera del alcance v1), pero el
 encoder produce una salida lista para conectar a cualquiera de ellas.
+
+---
+
+## Lo que implementa `transformador.zy`
+
+El módulo está completamente implementado en Zymbol. Estructura del código real:
+
+```zymbol
+codificacion_posicional(pos, dim_modelo) {
+    // PE(pos, 2i) = sin(pos / 10000^(2i/dm)), PE(pos, 2i+1) = cos(...)
+    pe = []
+    @ i:1..dim_modelo {
+        par     = (i - 1) / 2
+        expo    = ##.(2 * par) / ##.(dim_modelo)
+        divisor = _mat::pow(10000.0, expo)
+        angulo  = ##.(pos) / divisor
+        ? ((i % 2) == 1) { pe = pe$+ _mat::sin(angulo) }
+        _ {                 pe = pe$+ _mat::cos(angulo) }
+    }
+    <~ pe
+}
+
+bloque_codificador(x, config) {
+    // Sub-capa 1: auto-atención + residual + normalización
+    aten_sal = _atn::atencion_multiencabezado(x, x, x, config)
+    norm_1   = normalizar_capa(_ten::sumar(x, aten_sal), config.gamma_1, config.beta_1)
+    // Sub-capa 2: FAD + residual + normalización
+    ff_sal   = capa_feed_adelante(norm_1, config.pesos_ff1, config.sesgo_ff1,
+                                  config.pesos_ff2, config.sesgo_ff2)
+    <~ normalizar_capa(_ten::sumar(norm_1, ff_sal), config.gamma_2, config.beta_2)
+}
+
+codificador(secuencia, configs) {
+    x = secuencia
+    @ cfg:configs { x = bloque_codificador(x, cfg) }
+    <~ x
+}
+```
+
+**Nota de implementación — scope de funciones auxiliares:**
+Las funciones auxiliares del ejemplo (`_ceros`, `_unos`, `_identidad`) reciben
+las dimensiones como parámetros (`dm`, `nh`, `dff`) en lugar de leer variables
+del script. Esto es necesario porque en Zymbol las funciones definidas dentro
+de un script no tienen acceso a las variables mutables del scope exterior —
+solo a constantes (`:=`) y a sus propios parámetros.
 
 ---
 

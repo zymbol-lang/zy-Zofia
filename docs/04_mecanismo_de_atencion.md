@@ -230,24 +230,37 @@ cambió el campo de la IA.
 
 ## Lo que implementa `atencion.zy`
 
-```
-atencion_producto_punto(Q, K, V):
-  1. puntuaciones = producto_matricial(Q, transponer(K))
-  2. puntuaciones = multiplicar_escalar(puntuaciones, 1/raiz(columnas(K)))
-  3. pesos = aplicar_softmax_por_fila(puntuaciones)
-  4. salida = producto_matricial(pesos, V)
-  devolver salida
+El módulo está completamente implementado en Zymbol. Extracto del código real:
 
-atencion_multiencabezado(Q, K, V, config):
-  1. dividir Q, K, V en num_cabezas partes iguales
-  2. para cada cabeza:
-       proyectar con W_Qi, W_Ki, W_Vi
-       calcular atencion_producto_punto
-  3. concatenar salidas de todas las cabezas
-  4. proyectar con W_O
-  devolver salida
+```zymbol
+atencion_producto_punto(Q, K, V) {
+    // Atención(Q,K,V) = softmax(Q·Kᵀ / √dₖ) · V
+    // Fuente: Vaswani et al. (2017), Ecuación 1
+    dk     = K[1]$#
+    escala = 1.0 / _mat::sqrt(##.(dk))
+    Kt     = _ten::transponer(K)
+    puntos = _ten::multiplicar_escalar(_ten::producto_matricial(Q, Kt), escala)
+    pesos  = _softmax_filas(puntos)
+    <~ _ten::producto_matricial(pesos, V)
+}
+
+atencion_multiencabezado(Q, K, V, config) {
+    // Divide Q/K/V en columnas, aplica atención por cabeza, concatena y proyecta
+    dim_cab = config.dim_modelo / config.num_cabezas
+    Q_full  = _ten::producto_matricial(Q, config.pesos_q)
+    // ... (ver modulos/atencion.zy para el código completo)
+    <~ _ten::producto_matricial(concat, config.pesos_o)
+}
 ```
 
-El ejemplo `05_atencion_simple.zy` ejecutará atención sobre una secuencia de
-4 tokens con embeddings de dimensión 8 y 2 cabezas, imprimiendo los pesos de
-atención para que se vea qué posición atiende a cuál.
+**Verificación del criterio (Fase 4):**
+El ejemplo `05_atencion_simple.zy` ejecuta atención sobre una secuencia de
+4 tokens con embeddings de dimensión 4 y 2 cabezas. Con V = identidad, las
+filas de la salida son exactamente los pesos de atención — todas suman 1.0:
+
+```
+Suma fila 1: 1    Suma fila 2: 1    Suma fila 3: 1    Suma fila 4: 1
+```
+
+La máscara causal también se verifica: el token 1 solo se atiende a sí mismo
+y su salida es exactamente `[1, 0, 0, 0]` = V[1] (primera fila de la identidad).

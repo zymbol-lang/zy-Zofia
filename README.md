@@ -135,21 +135,35 @@ Zofía/
 
 ## Estado
 
-> **Fase actual:** Diseño completo — sin código implementado  
-> El código Zymbol se escribe después de aprobar todos los documentos de diseño.
+> **Fase actual:** ✅ Proyecto completo — todas las fases implementadas y verificadas
+
+| Fase | Módulo | Ejemplo | Estado |
+|------|--------|---------|--------|
+| 0 — Diseño y análisis | docs/ + HALLAZGOS.md | — | ✅ Completo |
+| 1 — Tensor | `modulos/tensor.zy` | `01_tensor_basico.zy`, `02_producto_matricial.zy` | ✅ Completo |
+| 2 — Gradiente | `modulos/grad.zy` | `03_descenso_gradiente.zy` | ✅ Completo |
+| 3 — Activaciones y pérdida | `modulos/activacion.zy`, `modulos/perdida.zy` | `04_red_simple.zy` | ✅ Completo |
+| 4 — Atención | `modulos/atencion.zy` | `05_atencion_simple.zy` | ✅ Completo |
+| 5 — Transformer encoder | `modulos/transformador.zy` | `06_transformer_encoder.zy` | ✅ Completo |
+
+Logros verificados:
+- La red XOR aprende en < 100 épocas (criterio era < 1000)
+- Los pesos de atención suman exactamente 1 por fila (propiedad del softmax)
+- El encoder preserva las dimensiones: 5 tokens × dim=4 entra y sale igual
 
 ---
 
 ## Versión de Zymbol
 
-Zofía requiere **Zymbol v0.0.6** o superior. Las siguientes características de v0.0.6
-son necesarias para la implementación:
+Zofía requiere **Zymbol v0.0.6** o superior.
 
-| Característica | Para qué se usa en Zofía |
-|----------------|--------------------------|
-| Global `:=` scope | Constantes matemáticas (`PI`, `E`) visibles en todas las funciones |
-| `#.###\|x\|` formatting | Salida legible de tensores (4 decimales) |
-| `^` float exponents | `sqrt(x) = x^0.5`, `exp(x) = E^x` sin módulo externo |
-| `std/matematica` (propuesto) | `sin`, `cos`, `ln` para encoding posicional y activaciones |
+| Característica v0.0.6 | Dónde se usa en Zofía |
+|-----------------------|------------------------|
+| `std/math` | `activacion.zy`, `atencion.zy`, `transformador.zy` — `sqrt`, `exp`, `ln`, `sin`, `cos`, `pow`, `tanh`, `sigmoid` |
+| `std/random` | `04_red_simple.zy` — inicialización de pesos con `rng::peso_f64()` |
+| `arr[i>j]$~ val` (deep update) | `tensor.zy` — actualización de elementos en matrices |
+| `$~` en tuplas nombradas | `grad.zy` — actualización funcional de campos `valor` y `grad` |
+| Inferencia numérica polimórfica | Todos los módulos — funciones reciben tanto `###` como `##.` |
+| `#.N\|x\|` formato decimal | Todos los ejemplos — mostrar pesos y pérdidas con 4 decimales |
 
 Repositorio del intérprete: [zymbol-lang/interpreter](https://github.com/zymbol-lang/interpreter)

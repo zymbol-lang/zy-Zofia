@@ -9,14 +9,14 @@
     }
 
     _ln_seguro(x) {
-        // Numerically stable log: clips at ε = 1e-7 to avoid log(0) = −∞
+        // Logaritmo numéricamente estable: recorta en ε = 1e-7 para evitar log(0) = −∞
         ? (x < 0.0000001) { <~ _mat::ln(0.0000001) }
         <~ _mat::ln(x)
     }
 
     mse(y_pred, y_real) {
-        // Mean squared error: (1/n) × Σ(ŷᵢ − yᵢ)²
-        // Source: standard regression loss, always non-negative
+        // Error cuadrático medio: (1/n) × Σ(ŷᵢ − yᵢ)²
+        // Fuente: función de pérdida estándar para regresión, siempre no negativa
         n = y_pred$#
         suma = 0.0
         @ i:1..n {
@@ -27,14 +27,14 @@
     }
 
     bce_escalar(yhat, y) {
-        // Binary cross-entropy for a single (prediction, target) pair
+        // Entropía cruzada binaria para un único par (predicción, objetivo)
         // L = −[y·log(ŷ) + (1−y)·log(1−ŷ)]
-        // Source: standard binary classification loss
+        // Fuente: función de pérdida estándar para clasificación binaria
         <~ -(y * _ln_seguro(yhat) + (1.0 - y) * _ln_seguro(1.0 - yhat))
     }
 
     entropia_cruzada_binaria(y_hat, y) {
-        // BCE averaged over a vector: (1/n) × Σᵢ BCE(ŷᵢ, yᵢ)
+        // BCE promediada sobre un vector: (1/n) × Σᵢ BCE(ŷᵢ, yᵢ)
         n = y_hat$#
         suma = 0.0
         @ i:1..n { suma = suma + bce_escalar(y_hat[i], y[i]) }
@@ -42,8 +42,8 @@
     }
 
     entropia_cruzada(y_hat, y) {
-        // Multi-class cross entropy: −Σᵢ yᵢ·log(ŷᵢ)
-        // Source: standard multi-class classification loss; used with softmax
+        // Entropía cruzada multiclase: −Σᵢ yᵢ·log(ŷᵢ)
+        // Fuente: función de pérdida estándar para clasificación multiclase; se usa con softmax
         suma = 0.0
         @ i:1..(y_hat$#) { suma = suma + y[i] * _ln_seguro(y_hat[i]) }
         <~ -suma

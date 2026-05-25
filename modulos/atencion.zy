@@ -10,14 +10,14 @@
         atencion_multiencabezado
     }
 
-    // Apply softmax row-wise to a matrix
+    // Aplica softmax fila a fila sobre una matriz
     _softmax_filas(M) {
         res = []
         @ fila:M { res = res$+ _act::softmax(fila) }
         <~ res
     }
 
-    // Extract columns [inicio..fin] (1-based, inclusive) from each row
+    // Extrae columnas [inicio..fin] (base 1, inclusive) de cada fila
     _extraer_cols(M, inicio, fin) {
         res = []
         @ fila:M {
@@ -28,7 +28,7 @@
         <~ res
     }
 
-    // Append B's columns to the right of A's columns (row by row)
+    // Concatena las columnas de B a la derecha de las columnas de A, fila a fila
     _concat_cols(A, B) {
         res = []
         @ i:1..(A$#) {
@@ -41,8 +41,8 @@
     }
 
     proyectar(entrada, pesos, sesgo) {
-        // Linear projection: entrada × pesos + sesgo (bias broadcast over rows)
-        // Source: standard affine transformation in neural networks
+        // Proyección lineal: entrada × pesos + sesgo (sesgo difundido sobre las filas)
+        // Fuente: transformación afín estándar en redes neuronales
         base = _ten::producto_matricial(entrada, pesos)
         res = []
         @ fila:base { res = res$+ _ten::sumar(fila, sesgo) }
@@ -50,8 +50,8 @@
     }
 
     atencion_producto_punto(Q, K, V) {
-        // Attention(Q,K,V) = softmax(Q·Kᵀ / √dₖ) · V
-        // Source: Vaswani et al. (2017), "Attention Is All You Need", Equation 1
+        // Atención(Q,K,V) = softmax(Q·Kᵀ / √dₖ) · V
+        // Fuente: Vaswani et al. (2017), "Attention Is All You Need", Ecuación 1
         dk     = K[1]$#
         escala = 1.0 / _mat::sqrt(##.(dk))
         Kt     = _ten::transponer(K)
@@ -61,8 +61,8 @@
     }
 
     atencion_enmascarada(Q, K, V, mascara) {
-        // Masked attention: sets -1e9 at mask==false positions before softmax
-        // Source: Vaswani et al. (2017); used in decoder to block future positions
+        // Atención con máscara: asigna −1e9 donde mascara==falso antes del softmax
+        // Fuente: Vaswani et al. (2017); usada en el decodificador para bloquear posiciones futuras
         dk     = K[1]$#
         escala = 1.0 / _mat::sqrt(##.(dk))
         Kt     = _ten::transponer(K)
@@ -84,19 +84,19 @@
     }
 
     atencion_multiencabezado(Q, K, V, config) {
-        // MultiHead(Q,K,V) = Concat(head₁,...,headₕ) × W_O
-        // Source: Vaswani et al. (2017), Section 3.2.2
+        // MultiCabeza(Q,K,V) = Concat(cabeza₁,…,cabezaₕ) × W_O
+        // Fuente: Vaswani et al. (2017), Sección 3.2.2
         // config: (num_cabezas, dim_modelo, pesos_q, pesos_k, pesos_v, pesos_o)
         nh      = config.num_cabezas
         dm      = config.dim_modelo
         dim_cab = dm / nh
 
-        // Project inputs to full model dimension (no bias in QKV projections)
+        // Proyectar entradas a la dimensión completa del modelo (sin sesgo en proyecciones QKV)
         Q_full = _ten::producto_matricial(Q, config.pesos_q)
         K_full = _ten::producto_matricial(K, config.pesos_k)
         V_full = _ten::producto_matricial(V, config.pesos_v)
 
-        // Per-head attention with column slicing + concatenation
+        // Atención por cabeza con segmentación de columnas y concatenación
         concat  = []
         primera = #1
         @ h:1..nh {
@@ -114,7 +114,7 @@
             }
         }
 
-        // Output projection W_O: [dim_modelo × dim_modelo]
+        // Proyección de salida W_O: [dim_modelo × dim_modelo]
         <~ _ten::producto_matricial(concat, config.pesos_o)
     }
 }

@@ -1,5 +1,5 @@
 // Fase 3: red neuronal que aprende XOR desde cero
-// Arquitectura: 2 → 4 (tanh) → 1 (sigmoid), descenso de gradiente por lote completo
+// Arquitectura: 2 → 4 (tanh) → 1 (sigmoide), descenso de gradiente por lote completo
 // Criterio: convergencia en < 1000 épocas
 
 <# ../modulos/activacion => act
@@ -7,10 +7,10 @@
 <# ../modulos/tensor     => ten
 <# std/random            => rng
 
-// Peso aleatorio en [−1, 1]  (rango amplio para romper simetría)
+// Peso aleatorio en [−1, 1] para romper simetría
 w_al() { <~ rng::peso_f64() * 10.0 }
 
-// Dataset XOR
+// Conjunto de datos XOR
 xs = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
 ys = [0.0, 1.0, 1.0, 0.0]
 
@@ -26,9 +26,9 @@ n_batch = xs$#
 nh      = W1$#
 ne      = xs[1]$#
 
-// Forward pass — retorna (z1, a1, z2, yhat)
-// Oculta: tanh (gradiente simétrico, no satura cerca de 0)
-// Salida: sigmoid (interpreta como probabilidad de XOR = 1)
+// Pase hacia adelante — devuelve (z1, a1, z2, yhat)
+// Capa oculta: tanh (gradiente simétrico, no se satura cerca de 0)
+// Capa de salida: sigmoide (interpreta como probabilidad de XOR = 1)
 adelante(x, W1f, b1f, W2f, b2f) {
     z1 = []
     @ i:1..(W1f$#) {
@@ -43,8 +43,8 @@ adelante(x, W1f, b1f, W2f, b2f) {
     <~ (z1: z1, a1: a1, z2: z2, yhat: yhat)
 }
 
-// Backward pass — gradientes via regla de la cadena
-// ∂BCE/∂z2 = ŷ − y  (sigmoid + BCE combinados)
+// Pase hacia atrás — gradientes via regla de la cadena
+// ∂BCE/∂z2 = ŷ − y  (sigmoide + BCE combinados)
 // ∂tanh/∂z1[i] = 1 − a1[i]²  (derivada de tanh usando salida cacheada)
 atras(x, y, a1b, yhatb, W2b) {
     dz2 = yhatb - y
@@ -65,7 +65,7 @@ atras(x, y, a1b, yhatb, W2b) {
     <~ (gW1: gW1, gb1: dz1, gW2: gW2, gb2: dz2)
 }
 
->> "Red neuronal XOR  —  2→4(tanh)→1(sigmoid)" ¶
+>> "Red neuronal XOR  —  2→4(tanh)→1(sigmoide)" ¶
 >> "épocas: " >> epocas >> "   tasa: " >> tasa ¶
 >> "─────────────────────────────────────────" ¶
 

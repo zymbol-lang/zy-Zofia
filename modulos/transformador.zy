@@ -1,0 +1,120 @@
+# transformador {
+    <# std/math   => _mat
+    <# tensor     => _ten
+    <# atencion   => _atn
+
+    #> {
+        codificacion_posicional
+        normalizar_capa
+        capa_feed_adelante
+        bloque_codificador
+        codificador
+    }
+
+    // Codificación posicional sinusoidal para la posición pos (base 1), con dim_modelo dimensiones
+    // Fuente: Vaswani et al. (2017), Sección 3.5
+    // PE(pos, 2i)   = sin(pos / 10000^(2i/d_modelo))
+    // PE(pos, 2i+1) = cos(pos / 10000^(2i/d_modelo))
+    codificacion_posicional(pos, dim_modelo) {
+        pe = []
+        @ i:1..dim_modelo {
+            // i es base 1; se mapea al índice de par en base 0
+            par     = (i - 1) / 2          // división entera: índice del par
+            expo    = ##.(2 * par) / ##.(dim_modelo)
+            divisor = _mat::pow(10000.0, expo)
+            angulo  = ##.(pos) / divisor
+            ? ((i % 2) == 1) {
+                pe = pe$+ _mat::sin(angulo)
+            } _ {
+                pe = pe$+ _mat::cos(angulo)
+            }
+        }
+        <~ pe
+    }
+
+    // Normalización de capa: normaliza cada vector fila x con gamma y beta aprendidos
+    // Fuente: Ba et al. (2016), "Layer Normalization"
+    // NC(x) = gamma × (x − media) / sqrt(var + eps) + beta
+    _normalizar_vec(vec, gamma, beta) {
+        n    = vec$#
+        suma = 0.0
+        @ x:vec { suma = suma + x }
+        media = suma / ##.(n)
+        var_s = 0.0
+        @ x:vec { diff = x - media; var_s = var_s + diff * diff }
+        varianza = var_s / ##.(n)
+        eps   = 0.000001
+        denom = _mat::sqrt(varianza + eps)
+        res   = []
+        @ i:1..n {
+            norm_i = (vec[i] - media) / denom
+            res = res$+ (gamma[i] * norm_i + beta[i])
+        }
+        <~ res
+    }
+
+    normalizar_capa(x, gamma, beta) {
+        res = []
+        @ fila:x { res = res$+ _normalizar_vec(fila, gamma, beta) }
+        <~ res
+    }
+
+    // Red de alimentación directa: dos capas lineales con ReLU entre ellas
+    // Fuente: Vaswani et al. (2017), Sección 3.3
+    // FAD(x) = max(0, x·W1 + b1)·W2 + b2
+    _relu_vec(v) {
+        res = []
+        @ x:v { ? (x > 0.0) { res = res$+ x } _ { res = res$+ 0.0 } }
+        <~ res
+    }
+
+    _proyectar_fila(fila, pesos, sesgo) {
+        res = []
+        @ j:1..(pesos[1]$#) {
+            s = sesgo[j]
+            @ i:1..(fila$#) { s = s + fila[i] * pesos[i>j] }
+            res = res$+ s
+        }
+        <~ res
+    }
+
+    capa_feed_adelante(x, pesos_1, sesgo_1, pesos_2, sesgo_2) {
+        res = []
+        @ fila:x {
+            h      = _relu_vec(_proyectar_fila(fila, pesos_1, sesgo_1))
+            salida = _proyectar_fila(h, pesos_2, sesgo_2)
+            res    = res$+ salida
+        }
+        <~ res
+    }
+
+    // Bloque codificador único: Atención Multi-Cabeza + Suma&Norm + FAD + Suma&Norm
+    // Fuente: Vaswani et al. (2017), Figura 1 (izquierda)
+    // campos de config: num_cabezas, dim_modelo, pesos_q, pesos_k, pesos_v, pesos_o,
+    //                   gamma_1, beta_1, pesos_ff1, sesgo_ff1, pesos_ff2, sesgo_ff2,
+    //                   gamma_2, beta_2
+    bloque_codificador(x, config) {
+        // Sub-capa 1: Atención Multi-Cabeza con conexión residual
+        aten_sal = _atn::atencion_multiencabezado(x, x, x, config)
+        // Suma y Normalización
+        res_1  = _ten::sumar(x, aten_sal)
+        norm_1 = normalizar_capa(res_1, config.gamma_1, config.beta_1)
+
+        // Sub-capa 2: Red de alimentación directa con conexión residual
+        ff_sal = capa_feed_adelante(norm_1, config.pesos_ff1, config.sesgo_ff1,
+                                    config.pesos_ff2, config.sesgo_ff2)
+        // Suma y Normalización
+        res_2  = _ten::sumar(norm_1, ff_sal)
+        norm_2 = normalizar_capa(res_2, config.gamma_2, config.beta_2)
+        <~ norm_2
+    }
+
+    // Codificador completo: N bloques codificadores apilados
+    // Fuente: Vaswani et al. (2017), Sección 3.1
+    // configs: lista de tuplas de configuración por bloque (una por capa)
+    codificador(secuencia, configs) {
+        x = secuencia
+        @ cfg:configs { x = bloque_codificador(x, cfg) }
+        <~ x
+    }
+}

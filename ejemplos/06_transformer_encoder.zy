@@ -1,0 +1,118 @@
+// Fase 5: encoder transformer completo — 5 tokens, 2 capas, 2 cabezas de atención
+// Arquitectura: embedding + codificación posicional → 2× (AMC + Suma&Norm + FAD + Suma&Norm)
+// Criterio: la salida tiene la misma forma que la entrada (el codificador preserva dimensiones)
+// Fuente: Vaswani et al. (2017), "Attention Is All You Need", Sección 3
+
+<# ../modulos/transformador => tfm
+<# ../modulos/tensor        => ten
+
+>> "━━━ Fase 5: Codificador Transformer ━━━" ¶
+
+// Hiperparámetros
+n_tokens    = 5
+dim_modelo  = 4
+dim_ff      = 8     // dimensión oculta de la FAD = 2 × dim_modelo
+num_cabezas = 2
+num_capas   = 2
+
+// Embeddings de tokens (5 × 4) — representaciones fijas para demostración
+tokens = [[0.1, 0.2, 0.3, 0.4],
+          [0.5, 0.1, 0.2, 0.3],
+          [0.3, 0.4, 0.1, 0.2],
+          [0.2, 0.3, 0.4, 0.1],
+          [0.4, 0.2, 0.3, 0.1]]
+
+// Añadir codificación posicional a cada token
+>> "¶" ¶
+>> "1. Codificación posicional (5 posiciones, dim=4)" ¶
+secuencia = []
+@ pos:1..n_tokens {
+    pe     = tfm::codificacion_posicional(pos, dim_modelo)
+    tok_pe = ten::sumar(tokens[pos], pe)
+    secuencia = secuencia$+ tok_pe
+}
+>> "   Forma entrada: " >> (secuencia$#) >> " × " >> (secuencia[1]$#) ¶
+
+// Funciones auxiliares para construir los parámetros de cada bloque
+_ceros(m, n) {
+    res = []
+    @ _i:1..m {
+        fila = []
+        @ _j:1..n { fila = fila$+ 0.0 }
+        res = res$+ fila
+    }
+    <~ res
+}
+
+_unos(n) { res = []; @ _i:1..n { res = res$+ 1.0 }; <~ res }
+
+_ceros_vec(n) { res = []; @ _i:1..n { res = res$+ 0.0 }; <~ res }
+
+_identidad(n) {
+    res = []
+    @ i:1..n {
+        fila = []
+        @ j:1..n {
+            ? (i == j) { fila = fila$+ 1.0 } _ { fila = fila$+ 0.0 }
+        }
+        res = res$+ fila
+    }
+    <~ res
+}
+
+// Construye la configuración de un bloque codificador
+// - Pesos AMC: identidad (dim × dim) para verificación limpia
+// - gamma/beta: unos/ceros (normalización de capa sin escala extra)
+// - Pesos FAD: ceros (paso neutro para verificar solo la forma)
+_config_bloque(dm, nh, dff) {
+    pff1 = _ceros(dm, dff)       // FAD capa 1: dm → dff
+    sff1 = _ceros_vec(dff)
+    pff2 = _ceros(dff, dm)       // FAD capa 2: dff → dm
+    sff2 = _ceros_vec(dm)
+
+    <~ (num_cabezas: nh,
+        dim_modelo:  dm,
+        pesos_q:     _identidad(dm),
+        pesos_k:     _identidad(dm),
+        pesos_v:     _identidad(dm),
+        pesos_o:     _identidad(dm),
+        gamma_1:     _unos(dm),
+        beta_1:      _ceros_vec(dm),
+        pesos_ff1:   pff1,
+        sesgo_ff1:   sff1,
+        pesos_ff2:   pff2,
+        sesgo_ff2:   sff2,
+        gamma_2:     _unos(dm),
+        beta_2:      _ceros_vec(dm))
+}
+
+// ─── Pasar por 2 bloques codificadores ───────────────────────────────────────
+>> "¶" ¶
+>> "2. Apilando " >> num_capas >> " bloques codificadores (AMC + Suma&Norm + FAD + Suma&Norm)" ¶
+
+configs = []
+@ _c:1..num_capas { configs = configs$+ _config_bloque(dim_modelo, num_cabezas, dim_ff) }
+
+salida = tfm::codificador(secuencia, configs)
+
+// ─── Verificar criterio de aceptación ────────────────────────────────────────
+>> "¶" ¶
+>> "3. Verificación de dimensiones" ¶
+>> "   Tokens entrada: " >> n_tokens >> "   dim_modelo: " >> dim_modelo ¶
+>> "   Tokens salida:  " >> (salida$#) >> "   dim salida:  " >> (salida[1]$#) ¶
+
+? (salida$# == n_tokens) {
+    >> "   ✓ Número de tokens preservado (" >> n_tokens >> ")" ¶
+}
+? (salida[1]$# == dim_modelo) {
+    >> "   ✓ Dimensión del modelo preservada (" >> dim_modelo >> ")" ¶
+}
+
+// Muestra de los valores de salida para confirmar que son razonables
+>> "¶" ¶
+>> "4. Muestra de salida" ¶
+>> "   Token 1: [" >> #.4|salida[1][1]| >> ", " >> #.4|salida[1][2]| >> ", " >> #.4|salida[1][3]| >> ", " >> #.4|salida[1][4]| >> "]" ¶
+>> "   Token 5: [" >> #.4|salida[5][1]| >> ", " >> #.4|salida[5][2]| >> ", " >> #.4|salida[5][3]| >> ", " >> #.4|salida[5][4]| >> "]" ¶
+
+>> "¶" ¶
+>> "━━━ Fase 5 completada ━━━" ¶

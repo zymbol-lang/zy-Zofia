@@ -223,29 +223,37 @@ forma (4 tokens × dim_modelo=4). Verificado 2026-05-25.
 
 ---
 
-## Fase 5 — Arquitectura Transformer (`modulos/transformador.zy`)
+## Fase 5 — Arquitectura Transformer (`modulos/transformador.zy`) ✅ COMPLETO
 
 **Qué se construye:** un encoder transformer completo con positional encoding,
 multi-head attention, feed-forward network y layer normalization.
 
-**Funciones a implementar:**
+**Funciones implementadas:**
 
 ```
 codificacion_posicional  -- (posicion, dim_modelo) → vector
-                         -- [positional encoding]
+                         -- [positional encoding sinusoidal]
 normalizar_capa          -- (x, gamma, beta) → tensor   [layer normalization]
 capa_feed_adelante       -- (x, pesos_1, sesgo_1, pesos_2, sesgo_2) → tensor
-                         -- [feed-forward network]
-bloque_codificador       -- (x, config) → tensor       [encoder block]
-codificador              -- (secuencia, config) → tensor [full encoder]
+                         -- [FFN: ReLU oculta, dos proyecciones lineales]
+bloque_codificador       -- (x, config) → tensor       [MHA + AddNorm + FFN + AddNorm]
+codificador              -- (secuencia, configs) → tensor [N bloques apilados]
 ```
 
-**Ejemplos al completar:**
-- `06_transformer_encoder.zy` — pasar una secuencia de 5 tokens por un encoder
-  de 2 capas y 2 cabezas de atención
+**Ejemplos:**
+- `06_transformer_encoder.zy` ✅ — 5 tokens × dim=4, 2 capas, 2 cabezas → salida 5×4
 
-**Criterio de aceptación:** la salida tiene la misma forma que la entrada
-(el encoder preserva las dimensiones).
+**Criterio de aceptación:** ✅ La salida tiene exactamente la misma forma que la entrada
+(encoder preserva dimensiones). Verificado 2026-05-25.
+
+**Notas de implementación:**
+- Positional encoding sinusoidal con `mat::sin`/`mat::cos` y división entera para par
+- Layer normalization normaliza cada fila por separado: `(x − μ) / √(σ² + 1e-6) × γ + β`
+- FFN: `_proyectar_fila` evita `ten::producto_matricial` para operar fila a fila
+- `bloque_codificador` usa `_atn::atencion_multiencabezado(x, x, x, config)` (self-attention)
+- `codificador` itera sobre lista de configs con `@ cfg:configs`
+- Las funciones helper (`_ceros`, `_unos`, `_identidad`) reciben dimensiones como parámetros
+  para evitar el problema de scope de variables del script en funciones internas
 
 ---
 

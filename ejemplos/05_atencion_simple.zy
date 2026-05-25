@@ -1,5 +1,5 @@
 // Fase 4: mecanismo de atención sobre una secuencia de 4 tokens
-// Demuestra scaled dot-product attention y multi-head attention
+// Demuestra atención producto punto escalada y atención multi-cabeza
 // Criterio: las puntuaciones de atención suman 1 por fila (propiedad del softmax)
 // Fuente: Vaswani et al. (2017), "Attention Is All You Need"
 
@@ -34,9 +34,8 @@ salida_pp = atn::atencion_producto_punto(Q, K, V)
 
 >> "   Forma salida: " >> (salida_pp$#) >> " filas × " >> (salida_pp[1]$#) >> " cols" ¶
 
-// Verificar propiedad del softmax: cada fila de la salida es una combinación
-// convexa de las filas de V, así que sus componentes están en [0,1] y suman ≈ 1
-// (con V = identidad, las filas de la salida son los pesos de atención directamente)
+// Con V = identidad, las filas de la salida son directamente los pesos de atención.
+// Propiedad del softmax: cada fila suma exactamente 1
 >> "   Suma fila 1: " >> #.4|(salida_pp[1][1]+salida_pp[1][2]+salida_pp[1][3]+salida_pp[1][4])| ¶
 >> "   Suma fila 2: " >> #.4|(salida_pp[2][1]+salida_pp[2][2]+salida_pp[2][3]+salida_pp[2][4])| ¶
 >> "   Suma fila 3: " >> #.4|(salida_pp[3][1]+salida_pp[3][2]+salida_pp[3][3]+salida_pp[3][4])| ¶
@@ -44,9 +43,9 @@ salida_pp = atn::atencion_producto_punto(Q, K, V)
 
 // ─── Atención enmascarada (causal) ───────────────────────────────────────────
 >> "¶" ¶
->> "2. Atención enmascarada (triangular inferior — decoder causal)" ¶
+>> "2. Atención enmascarada (triangular inferior — decodificador causal)" ¶
 
-// Máscara causal: token i solo atiende a tokens j ≤ i
+// Máscara causal: el token i solo atiende a tokens j ≤ i
 mascara = [[#1, #0, #0, #0],
            [#1, #1, #0, #0],
            [#1, #1, #1, #0],
@@ -57,12 +56,12 @@ salida_mask = atn::atencion_enmascarada(Q, K, V, mascara)
 >> "   Suma fila 1: " >> #.4|(salida_mask[1][1]+salida_mask[1][2]+salida_mask[1][3]+salida_mask[1][4])| ¶
 >> "   Suma fila 4: " >> #.4|(salida_mask[4][1]+salida_mask[4][2]+salida_mask[4][3]+salida_mask[4][4])| ¶
 
-// Token 1 con máscara causal solo ve a sí mismo → salida = V[1] = [1,0,0,0]
+// El token 1 con máscara causal solo se atiende a sí mismo → salida = V[1] = [1,0,0,0]
 >> "   Fila 1 (solo atiende token 1): " >> #.4|salida_mask[1][1]| >> " " >> #.4|salida_mask[1][2]| >> " " >> #.4|salida_mask[1][3]| >> " " >> #.4|salida_mask[1][4]| ¶
 
-// ─── Multi-head attention (2 cabezas, dim=4) ──────────────────────────────────
+// ─── Atención multi-cabeza (2 cabezas, dim=4) ─────────────────────────────────
 >> "¶" ¶
->> "3. Multi-head attention (2 cabezas, dim_modelo=4)" ¶
+>> "3. Atención multi-cabeza (2 cabezas, dim_modelo=4)" ¶
 
 // Pesos identidad para verificación sencilla (4×4)
 _id4() {
@@ -82,7 +81,7 @@ config = (num_cabezas: 2,
 salida_mha = atn::atencion_multiencabezado(Q, K, V, config)
 >> "   Forma salida: " >> (salida_mha$#) >> " filas × " >> (salida_mha[1]$#) >> " cols" ¶
 
-// Con pesos identidad y V=identidad, la salida preserva dimensiones
+// Con pesos identidad y V=identidad, la salida preserva las dimensiones
 ? (salida_mha$# == 4) {
     >> "   ✓ Preserva número de tokens (4)" ¶
 }
