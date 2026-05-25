@@ -1,0 +1,40 @@
+// @vm-skip
+// Ejemplo 01: Fundamentos — Tensores y Operaciones con Vectores
+// Cubre: docs/00_fundamentos_matematicos.md, Parte 1 (escalares/vectores) y Parte 2 (operaciones)
+
+<# ../modulos/tensor => t
+
+// --- Crear tensores ---
+>> "=== Crear tensores ===" ¶
+matriz_ceros = t::crear([2, 3], 0.0)
+t::imprimir(matriz_ceros)
+
+vec_a = [1.0, 2.0, 3.0]
+vec_b = [4.0, 5.0, 6.0]
+>> "Forma de vec_a: " ¶
+>> t::forma_de(vec_a) ¶
+
+// --- Ejemplo 1: Suma de vectores ---
+// a + b = [1+4, 2+5, 3+6] = [5, 7, 9]
+>> "=== Ejemplo 1: Suma de vectores ===" ¶
+t::imprimir(t::sumar(vec_a, vec_b))
+
+// --- Ejemplo 2: Multiplicacion escalar ---
+// 2.0 * [1, 2, 3] = [2, 4, 6]
+>> "=== Ejemplo 2: Multiplicacion escalar ===" ¶
+t::imprimir(t::multiplicar_escalar(vec_a, 2.0))
+
+// --- Ejemplo 3: Producto punto ---
+// [1,2,3] . [4,5,6] = (1*4) + (2*5) + (3*6) = 4+10+18 = 32
+>> "=== Ejemplo 3: Producto punto ===" ¶
+>> t::producto_punto(vec_a, vec_b) ¶
+
+// --- Verificacion de ejercicios del documento ---
+// Ejercicio 1: [2,3] . [4,-1] = 8+(-3) = 5
+>> "=== Ejercicio del doc: [2,3] . [4,-1] ===" ¶
+>> t::producto_punto([2.0, 3.0], [4.0, -1.0]) ¶
+
+// --- Acceso por elemento ---
+>> "=== Acceso por indice ===" ¶
+vec_test = [10.0, 20.0, 30.0]
+>> t::elemento(vec_test, [2]) ¶

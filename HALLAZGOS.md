@@ -77,7 +77,29 @@ específicas encontradas durante la construcción de Zofía.
 
 | ID | Módulo | Contexto | Estado |
 |----|--------|----------|--------|
-| — | — | *Se pobla durante la implementación* | — |
+| [BUG-Z001](#bug-z001--vm-aritmética-int-falla-con-flotantes-de-arreglos) | todos los módulos | Aritmética `+`, `-`, `*`, `/` sobre elementos de arreglos Float en el VM | resuelto v0.0.6 |
+
+---
+
+### BUG-Z001 · VM: aritmética Int falla con flotantes de arreglos — RESUELTO en v0.0.6
+
+- **Módulo:** `tensor.zy` (Fase 1); afecta todos los módulos que operan sobre arreglos Float
+- **Síntoma:** `zymbol run --vm` lanza `type error: expected Int, got Float` al evaluar
+  expresiones como `a[i] + b[i]` cuando el arreglo contiene Float.
+- **Causa raíz (compilador):** `compile_index` en `zymbol-compiler` emite `ArrayGet` pero
+  **nunca anota el tipo del registro resultado** → el registro queda `StaticType::Unknown`.
+  `compile_binary` interpreta `Unknown || Unknown` como `is_float = false` y emite `AddInt`
+  en lugar de `AddFloat`.
+- **Causa raíz (VM):** La instrucción `AddInt` usaba el macro `ri!` que solo acepta
+  `Value::Int`; lanzaba `TypeError` inmediatamente sobre un `Value::Float`.
+- **Resolución:** Se añadió **dispatch dinámico** en el VM (`zymbol-vm/src/lib.rs`): cada
+  instrucción `AddInt` / `SubInt` / `MulInt` / `DivInt` / `ModInt` / `PowInt` / `NegInt` y
+  sus variantes `Imm` comprueban el tipo real del registro en ejecución. Si algún operando
+  es `Float`, cae al path flotante usando `rf!` (que coerciona `Int→f64`); si ambos son
+  `Int`, mantiene aritmética entera. Este comportamiento coincide con el tree-walker.
+- **Impacto:** Sin este fix, **ningún módulo de Zofía podía ejecutarse con `--vm`**; toda
+  la aritmética sobre tensores de `Float` fallaba.
+- **Tests:** 438/438 PASS, 0 FAIL después del fix (sin regresiones).
 
 ---
 

@@ -1,0 +1,47 @@
+// @vm-skip
+// Ejemplo 02: Algebra Lineal — Producto Matricial y Transposicion
+// Cubre: docs/00_fundamentos_matematicos.md, Parte 2 (matrices) y Parte 4 (descenso de gradiente)
+
+<# ../modulos/tensor => t
+
+// --- Ejemplo 4: Multiplicacion matricial ---
+// A = [[1,2],[3,4]], B = [[5,6],[7,8]]
+// AB = [[(1*5+2*7), (1*6+2*8)], [(3*5+4*7), (3*6+4*8)]]
+//    = [[19, 22], [43, 50]]
+>> "=== Ejemplo 4: Producto matricial ===" ¶
+A = [[1.0, 2.0], [3.0, 4.0]]
+B = [[5.0, 6.0], [7.0, 8.0]]
+t::imprimir(t::producto_matricial(A, B))
+
+// --- Ejercicio del doc: 3x4 * 4x2 tiene forma [3, 2] ---
+>> "=== Ejercicio del doc: forma de (3x4) * (4x2) ===" ¶
+M1 = t::crear([3, 4], 1.0)
+M2 = t::crear([4, 2], 1.0)
+>> t::forma_de(t::producto_matricial(M1, M2)) ¶
+
+// --- Ejemplo 5: Transposicion ---
+// A = [[1,2,3],[4,5,6]] -> At = [[1,4],[2,5],[3,6]]
+>> "=== Ejemplo 5: Transposicion ===" ¶
+Amat = [[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]
+At = t::transponer(Amat)
+t::imprimir(At)
+
+// --- Ejemplo 6: Paso de descenso de gradiente ---
+// Formula: w <- w - alpha * gradiente
+// Si alpha=0.1 y gradiente=[0.5, 0.2, -0.1]:
+//   delta = [0.05, 0.02, -0.01]
+//   pesos_nuevos = pesos - delta
+>> "=== Ejemplo 6: Descenso de gradiente ===" ¶
+pesos     = [0.5, -0.3, 0.8]
+gradiente = [0.5, 0.2, -0.1]
+tasa      = 0.1
+
+delta       = t::multiplicar_escalar(gradiente, tasa)
+pesos_nuevos = t::restar(pesos, delta)
+
+>> "Pesos antes:  " ¶
+t::imprimir(pesos)
+>> "Delta (tasa * gradiente): " ¶
+t::imprimir(delta)
+>> "Pesos despues: " ¶
+t::imprimir(pesos_nuevos)

@@ -79,15 +79,16 @@ capacidades de Zymbol necesarias para Zofia. Todos en verde con Zymbol v0.0.6.
 
 ---
 
-## Fase 1 — Módulo Tensor (`modulos/tensor.zy`)
+## Fase 1 — Módulo Tensor (`modulos/tensor.zy`) ✅ COMPLETO
 
 **Qué se construye:** representación y operaciones sobre tensores N-dimensionales
 implementados como listas anidadas en Zymbol.
 
-**Funciones a implementar:**
+**Funciones implementadas:**
 
 ```
 crear             -- (forma, valor_inicial) → tensor
+crear_desde_lista -- (lista_plana, forma) → tensor
 forma_de          -- (tensor) → lista de enteros
 elemento          -- (tensor, indices) → número
 sumar             -- (a, b) → tensor  [elemento a elemento]
@@ -101,12 +102,18 @@ reformar          -- (tensor, nueva_forma) → tensor
 imprimir          -- (tensor) → ninguno
 ```
 
-**Ejemplos al completar:**
-- `01_tensor_basico.zy` — crear tensores, acceder elementos, imprimir forma
-- `02_producto_matricial.zy` — multiplicar matrices, verificar dimensiones
+**Ejemplos:**
+- `ejemplos/01_tensor_basico.zy` ✅ — crear tensores, acceder elementos, imprimir forma
+- `ejemplos/02_producto_matricial.zy` ✅ — multiplicar matrices, transponer, descenso de gradiente
 
-**Criterio de aceptación:** los 6 ejemplos de álgebra lineal de
-`docs/00_fundamentos_matematicos.md` corren sin errores.
+**Criterio de aceptación:** ✅ Los 6 ejemplos de álgebra lineal de
+`docs/00_fundamentos_matematicos.md` corren sin errores (verificado 2026-05-25).
+
+**Notas de implementación:**
+- Detección de tipo con `(x#?)[1] == "##]"` para distinguir arrays de escalares
+- Recursión N-D uniforme: todas las operaciones funcionan para tensores de cualquier profundidad
+- For-each (`@ elem:t`) donde no se necesita índice; rango solo cuando se emparejan dos arrays
+- `reformar` aplana primero y reconstruye con `_reformar_rec` (devuelve tupla posicional de estado)
 
 ---
 
