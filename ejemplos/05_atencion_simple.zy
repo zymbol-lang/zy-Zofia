@@ -1,0 +1,94 @@
+// Fase 4: mecanismo de atención sobre una secuencia de 4 tokens
+// Demuestra scaled dot-product attention y multi-head attention
+// Criterio: las puntuaciones de atención suman 1 por fila (propiedad del softmax)
+// Fuente: Vaswani et al. (2017), "Attention Is All You Need"
+
+<# ../modulos/atencion => atn
+<# ../modulos/tensor   => ten
+<# std/math            => mat
+
+>> "━━━ Fase 4: Mecanismo de Atención ━━━" ¶
+
+// Secuencia: 4 tokens, dim_modelo = 4
+// Representaciones de tokens simples (embeddings manuales)
+Q = [[1.0, 0.0, 0.5, 0.2],
+     [0.0, 1.0, 0.3, 0.8],
+     [0.5, 0.5, 1.0, 0.1],
+     [0.2, 0.8, 0.0, 1.0]]
+
+K = [[1.0, 0.0, 0.5, 0.2],
+     [0.0, 1.0, 0.3, 0.8],
+     [0.5, 0.5, 1.0, 0.1],
+     [0.2, 0.8, 0.0, 1.0]]
+
+V = [[1.0, 0.0, 0.0, 0.0],
+     [0.0, 1.0, 0.0, 0.0],
+     [0.0, 0.0, 1.0, 0.0],
+     [0.0, 0.0, 0.0, 1.0]]
+
+// ─── Atención producto punto escalada ────────────────────────────────────────
+>> "¶" ¶
+>> "1. Atención producto punto (Q·Kᵀ / √dₖ) · V" ¶
+
+salida_pp = atn::atencion_producto_punto(Q, K, V)
+
+>> "   Forma salida: " >> (salida_pp$#) >> " filas × " >> (salida_pp[1]$#) >> " cols" ¶
+
+// Verificar propiedad del softmax: cada fila de la salida es una combinación
+// convexa de las filas de V, así que sus componentes están en [0,1] y suman ≈ 1
+// (con V = identidad, las filas de la salida son los pesos de atención directamente)
+>> "   Suma fila 1: " >> #.4|(salida_pp[1][1]+salida_pp[1][2]+salida_pp[1][3]+salida_pp[1][4])| ¶
+>> "   Suma fila 2: " >> #.4|(salida_pp[2][1]+salida_pp[2][2]+salida_pp[2][3]+salida_pp[2][4])| ¶
+>> "   Suma fila 3: " >> #.4|(salida_pp[3][1]+salida_pp[3][2]+salida_pp[3][3]+salida_pp[3][4])| ¶
+>> "   Suma fila 4: " >> #.4|(salida_pp[4][1]+salida_pp[4][2]+salida_pp[4][3]+salida_pp[4][4])| ¶
+
+// ─── Atención enmascarada (causal) ───────────────────────────────────────────
+>> "¶" ¶
+>> "2. Atención enmascarada (triangular inferior — decoder causal)" ¶
+
+// Máscara causal: token i solo atiende a tokens j ≤ i
+mascara = [[#1, #0, #0, #0],
+           [#1, #1, #0, #0],
+           [#1, #1, #1, #0],
+           [#1, #1, #1, #1]]
+
+salida_mask = atn::atencion_enmascarada(Q, K, V, mascara)
+>> "   Forma salida: " >> (salida_mask$#) >> " filas × " >> (salida_mask[1]$#) >> " cols" ¶
+>> "   Suma fila 1: " >> #.4|(salida_mask[1][1]+salida_mask[1][2]+salida_mask[1][3]+salida_mask[1][4])| ¶
+>> "   Suma fila 4: " >> #.4|(salida_mask[4][1]+salida_mask[4][2]+salida_mask[4][3]+salida_mask[4][4])| ¶
+
+// Token 1 con máscara causal solo ve a sí mismo → salida = V[1] = [1,0,0,0]
+>> "   Fila 1 (solo atiende token 1): " >> #.4|salida_mask[1][1]| >> " " >> #.4|salida_mask[1][2]| >> " " >> #.4|salida_mask[1][3]| >> " " >> #.4|salida_mask[1][4]| ¶
+
+// ─── Multi-head attention (2 cabezas, dim=4) ──────────────────────────────────
+>> "¶" ¶
+>> "3. Multi-head attention (2 cabezas, dim_modelo=4)" ¶
+
+// Pesos identidad para verificación sencilla (4×4)
+_id4() {
+    <~ [[1.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0],
+        [0.0, 0.0, 0.0, 1.0]]
+}
+
+config = (num_cabezas: 2,
+          dim_modelo:  4,
+          pesos_q:     _id4(),
+          pesos_k:     _id4(),
+          pesos_v:     _id4(),
+          pesos_o:     _id4())
+
+salida_mha = atn::atencion_multiencabezado(Q, K, V, config)
+>> "   Forma salida: " >> (salida_mha$#) >> " filas × " >> (salida_mha[1]$#) >> " cols" ¶
+
+// Con pesos identidad y V=identidad, la salida preserva dimensiones
+? (salida_mha$# == 4) {
+    >> "   ✓ Preserva número de tokens (4)" ¶
+}
+? (salida_mha[1]$# == 4) {
+    >> "   ✓ Preserva dim_modelo (4)" ¶
+}
+
+>> "¶" ¶
+>> "━━━ Fase 4 completada ━━━" ¶

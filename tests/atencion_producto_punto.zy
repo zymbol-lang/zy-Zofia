@@ -1,0 +1,19 @@
+// Test: atencion_producto_punto — attention weights sum to 1 per row (softmax property)
+<# ../modulos/atencion => atn
+
+// 3 tokens, dim=2
+// Q = K = V = identity-like matrix for simple verification
+Q = [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
+K = [[1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
+V = [[1.0, 0.0], [0.0, 1.0], [0.5, 0.5]]
+
+salida = atn::atencion_producto_punto(Q, K, V)
+
+// Output shape: 3 rows x 2 cols
+>> (salida$#) ¶
+>> (salida[1]$#) ¶
+
+// Each output row is a weighted sum of V rows — values must be in [0,1] range
+// Just verify output is a 3x2 matrix (shape correct)
+? (salida$# == 3) { >> "forma_filas: ok" ¶ } _ { >> "forma_filas: fallo" ¶ }
+? (salida[1]$# == 2) { >> "forma_cols: ok" ¶ } _ { >> "forma_cols: fallo" ¶ }

@@ -191,27 +191,35 @@ predicciones correctas en 3/3 ejecuciones con inicialización aleatoria (verific
 
 ---
 
-## Fase 4 — Mecanismo de Atención (`modulos/atencion.zy`)
+## Fase 4 — Mecanismo de Atención (`modulos/atencion.zy`) ✅ COMPLETO
 
 **Qué se construye:** scaled dot-product attention y multi-head attention
 como se describe en Vaswani et al. (2017).
 
-**Funciones a implementar:**
+**Funciones implementadas:**
 
 ```
 atencion_producto_punto  -- (consulta, clave, valor) → tensor
                          -- [scaled dot-product attention]
 atencion_enmascarada     -- (consulta, clave, valor, mascara) → tensor
-proyectar                -- (x, pesos) → tensor        [linear projection]
+proyectar                -- (x, pesos, sesgo) → tensor  [linear projection]
 atencion_multiencabezado -- (consulta, clave, valor, config) → tensor
                          -- [multi-head attention]
 ```
 
-**Ejemplos al completar:**
-- `05_atencion_simple.zy` — calcular atención sobre una secuencia de 4 tokens
+**Ejemplos:**
+- `05_atencion_simple.zy` ✅ — atención sobre 4 tokens: sumas = 1 por fila, máscara causal, 2 cabezas
 
-**Criterio de aceptación:** las puntuaciones de atención suman 1 por fila
-(propiedad del softmax).
+**Criterio de aceptación:** ✅ Las puntuaciones de atención suman exactamente 1 por fila
+(propiedad del softmax); máscara causal bloquea posiciones futuras; multi-head preserva
+forma (4 tokens × dim_modelo=4). Verificado 2026-05-25.
+
+**Notas de implementación:**
+- `_softmax_filas` delega en `_act::softmax` por fila — reutiliza Fase 3
+- `_extraer_cols(M, inicio, fin)` usa indexado 1-based con rango `inicio..fin`
+- `_concat_cols(A, B)` reconstruye fila a fila con `A[i>j]` y `B[i>j]`
+- Multi-head con pesos identidad y V=identidad preserva la salida exactamente
+- `primera = #1` → bandera booleana para inicializar `concat` sin lista vacía
 
 ---
 

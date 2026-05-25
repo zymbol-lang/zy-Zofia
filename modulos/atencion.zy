@@ -1,0 +1,120 @@
+# atencion {
+    <# std/math   => _mat
+    <# tensor     => _ten
+    <# activacion => _act
+
+    #> {
+        proyectar
+        atencion_producto_punto
+        atencion_enmascarada
+        atencion_multiencabezado
+    }
+
+    // Apply softmax row-wise to a matrix
+    _softmax_filas(M) {
+        res = []
+        @ fila:M { res = res$+ _act::softmax(fila) }
+        <~ res
+    }
+
+    // Extract columns [inicio..fin] (1-based, inclusive) from each row
+    _extraer_cols(M, inicio, fin) {
+        res = []
+        @ fila:M {
+            cols = []
+            @ j:inicio..fin { cols = cols$+ fila[j] }
+            res = res$+ cols
+        }
+        <~ res
+    }
+
+    // Append B's columns to the right of A's columns (row by row)
+    _concat_cols(A, B) {
+        res = []
+        @ i:1..(A$#) {
+            fila = []
+            @ j:1..(A[i]$#) { fila = fila$+ A[i>j] }
+            @ j:1..(B[i]$#) { fila = fila$+ B[i>j] }
+            res = res$+ fila
+        }
+        <~ res
+    }
+
+    proyectar(entrada, pesos, sesgo) {
+        // Linear projection: entrada × pesos + sesgo (bias broadcast over rows)
+        // Source: standard affine transformation in neural networks
+        base = _ten::producto_matricial(entrada, pesos)
+        res = []
+        @ fila:base { res = res$+ _ten::sumar(fila, sesgo) }
+        <~ res
+    }
+
+    atencion_producto_punto(Q, K, V) {
+        // Attention(Q,K,V) = softmax(Q·Kᵀ / √dₖ) · V
+        // Source: Vaswani et al. (2017), "Attention Is All You Need", Equation 1
+        dk     = K[1]$#
+        escala = 1.0 / _mat::sqrt(##.(dk))
+        Kt     = _ten::transponer(K)
+        puntos = _ten::multiplicar_escalar(_ten::producto_matricial(Q, Kt), escala)
+        pesos  = _softmax_filas(puntos)
+        <~ _ten::producto_matricial(pesos, V)
+    }
+
+    atencion_enmascarada(Q, K, V, mascara) {
+        // Masked attention: sets -1e9 at mask==false positions before softmax
+        // Source: Vaswani et al. (2017); used in decoder to block future positions
+        dk     = K[1]$#
+        escala = 1.0 / _mat::sqrt(##.(dk))
+        Kt     = _ten::transponer(K)
+        puntos = _ten::multiplicar_escalar(_ten::producto_matricial(Q, Kt), escala)
+        puntos_m = []
+        @ i:1..(puntos$#) {
+            fila = []
+            @ j:1..(puntos[i]$#) {
+                ? (mascara[i>j]) {
+                    fila = fila$+ puntos[i>j]
+                } _ {
+                    fila = fila$+ (-1000000000.0)
+                }
+            }
+            puntos_m = puntos_m$+ fila
+        }
+        pesos = _softmax_filas(puntos_m)
+        <~ _ten::producto_matricial(pesos, V)
+    }
+
+    atencion_multiencabezado(Q, K, V, config) {
+        // MultiHead(Q,K,V) = Concat(head₁,...,headₕ) × W_O
+        // Source: Vaswani et al. (2017), Section 3.2.2
+        // config: (num_cabezas, dim_modelo, pesos_q, pesos_k, pesos_v, pesos_o)
+        nh      = config.num_cabezas
+        dm      = config.dim_modelo
+        dim_cab = dm / nh
+
+        // Project inputs to full model dimension (no bias in QKV projections)
+        Q_full = _ten::producto_matricial(Q, config.pesos_q)
+        K_full = _ten::producto_matricial(K, config.pesos_k)
+        V_full = _ten::producto_matricial(V, config.pesos_v)
+
+        // Per-head attention with column slicing + concatenation
+        concat  = []
+        primera = #1
+        @ h:1..nh {
+            inicio  = (h - 1) * dim_cab + 1
+            fin     = h * dim_cab
+            Qh      = _extraer_cols(Q_full, inicio, fin)
+            Kh      = _extraer_cols(K_full, inicio, fin)
+            Vh      = _extraer_cols(V_full, inicio, fin)
+            cabeza  = atencion_producto_punto(Qh, Kh, Vh)
+            ? (primera) {
+                concat  = cabeza
+                primera = #0
+            } _ {
+                concat = _concat_cols(concat, cabeza)
+            }
+        }
+
+        // Output projection W_O: [dim_modelo × dim_modelo]
+        <~ _ten::producto_matricial(concat, config.pesos_o)
+    }
+}
