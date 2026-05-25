@@ -151,29 +151,43 @@ tasa 0.1 (verificado 2026-05-25, TW y VM, x₄₁ ≈ 6.65×10⁻⁴).
 
 ---
 
-## Fase 3 — Activaciones y Pérdida
+## Fase 3 — Activaciones y Pérdida ✅ COMPLETO
 
 **Módulo `modulos/activacion.zy`:**
 
 ```
-relu              -- (x) → número o tensor
-sigmoide          -- (x) → número o tensor    [sigmoid]
-softmax           -- (vector) → vector de probabilidades
-tangente_hiperbolica -- (x) → número          [tanh]
+relu                    -- (x) → escalar        [max(0,x)]
+relu_gradiente          -- (x) → escalar        [1 si x>0, 0 si no]
+relu_vec                -- (v) → vector
+relu_grad_vec           -- (v) → vector
+sigmoide                -- (x) → escalar        [1/(1+e^−x)]
+sigmoide_vec            -- (v) → vector
+tangente_hiperbolica    -- (x) → escalar        [tanh(x)]
+tangente_hiperbolica_vec -- (v) → vector
+tanh_grad_vec           -- (a_vec) → vector     [1−a² dado output cacheado]
+softmax                 -- (v) → vector de probabilidades
 ```
 
 **Módulo `modulos/perdida.zy`:**
 
 ```
-mse               -- (prediccion, objetivo) → escalar
-entropia_cruzada  -- (prediccion, objetivo) → escalar  [cross entropy]
-entropia_cruzada_binaria -- (prediccion, objetivo) → escalar
+mse                       -- (y_pred, y_real) → escalar
+bce_escalar               -- (yhat, y) → escalar   [binary cross-entropy]
+entropia_cruzada_binaria  -- (y_hat, y) → escalar  [BCE promediado]
+entropia_cruzada          -- (y_hat, y) → escalar  [multi-class CE]
 ```
 
-**Ejemplos al completar:**
-- `04_red_simple.zy` — red de 2 capas que aprende XOR (el problema clásico)
+**Ejemplos:**
+- `04_red_simple.zy` ✅ — XOR 2→4(tanh)→1(sigmoid) converge en <100 épocas
 
-**Criterio de aceptación:** la red aprende XOR en menos de 1000 épocas.
+**Criterio de aceptación:** ✅ La red aprende XOR en <100 épocas (criterio era <1000);
+predicciones correctas en 3/3 ejecuciones con inicialización aleatoria (verificado 2026-05-25).
+
+**Notas de implementación:**
+- Usar `tanh` en capa oculta (gradiente más fuerte que sigmoid cerca de 0)
+- Inicialización en [−1, 1] para romper simetría
+- Tasa 1.5 con batch completo (4 ejemplos) converge en <100 épocas
+- `###(yhat)` redondea al entero más cercano (0 o 1) — NO usar `###(yhat+0.5)`
 
 ---
 

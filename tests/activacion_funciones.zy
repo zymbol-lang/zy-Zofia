@@ -1,0 +1,28 @@
+// Test: módulo activacion — relu, sigmoid, tanh, softmax
+<# ../modulos/activacion => act
+
+// relu: max(0,x)
+>> act::relu(3.0) ¶
+>> act::relu(0.0) ¶
+>> act::relu(-2.0) ¶
+
+// relu_gradiente
+>> act::relu_gradiente(1.0) ¶
+>> act::relu_gradiente(-1.0) ¶
+
+// sigmoid (valor conocido en x=0)
+>> act::sigmoide(0) ¶
+
+// tanh (valor conocido en x=0)
+>> act::tangente_hiperbolica(0) ¶
+
+// tanh_grad_vec: 1 − a²  con a = [0, 1] → [1, 0]
+g = act::tanh_grad_vec([0.0, 1.0])
+>> g[1] ¶
+>> g[2] ¶
+
+// softmax: [1,1,1] → todos iguales a 1/3
+s = act::softmax([1.0, 1.0, 1.0])
+>> #.4|s[1]| ¶
+>> #.4|s[2]| ¶
+>> #.4|s[3]| ¶

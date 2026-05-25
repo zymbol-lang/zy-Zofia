@@ -1,0 +1,89 @@
+# activacion {
+    <# std/math => _mat
+
+    #> {
+        relu
+        relu_gradiente
+        relu_vec
+        relu_grad_vec
+        sigmoide
+        sigmoide_vec
+        tangente_hiperbolica
+        tangente_hiperbolica_vec
+        tanh_grad_vec
+        softmax
+    }
+
+    relu(x) {
+        // ReLU: max(0, x) — introduces non-linearity without saturation
+        // Source: Nair & Hinton (2010), Rectified Linear Units Improve RBMs
+        ? (x > 0.0) { <~ x }
+        <~ 0.0
+    }
+
+    relu_gradiente(x) {
+        // ∂ReLU/∂x: 1 if x > 0, else 0 (undefined at 0, we return 0)
+        ? (x > 0.0) { <~ 1.0 }
+        <~ 0.0
+    }
+
+    relu_vec(v) {
+        // Apply relu element-wise to a vector
+        res = []
+        @ x:v { res = res$+ relu(x) }
+        <~ res
+    }
+
+    relu_grad_vec(v) {
+        // Apply relu_gradiente element-wise to pre-activation vector
+        res = []
+        @ x:v { res = res$+ relu_gradiente(x) }
+        <~ res
+    }
+
+    sigmoide(x) {
+        // σ(x) = 1 / (1 + e^−x) — maps any real to (0, 1)
+        // Source: Rosenblatt (1958); used as binary output activation
+        <~ _mat::sigmoid(x)
+    }
+
+    sigmoide_vec(v) {
+        // Apply sigmoid element-wise to a vector
+        res = []
+        @ x:v { res = res$+ _mat::sigmoid(x) }
+        <~ res
+    }
+
+    tangente_hiperbolica_vec(v) {
+        // Apply tanh element-wise to a vector
+        res = []
+        @ x:v { res = res$+ _mat::tanh(x) }
+        <~ res
+    }
+
+    tangente_hiperbolica(x) {
+        // tanh(x) — maps any real to (−1, 1); zero-centered unlike sigmoid
+        <~ _mat::tanh(x)
+    }
+
+    tanh_grad_vec(a_vec) {
+        // ∂tanh/∂z at cached output a: 1 − a²
+        // Pass already-computed tanh values to avoid recomputing in backprop
+        // Source: standard tanh derivative identity
+        res = []
+        @ a:a_vec { res = res$+ (1.0 - a * a) }
+        <~ res
+    }
+
+    softmax(v) {
+        // softmax(v)ᵢ = e^vᵢ / Σⱼ e^vⱼ — converts scores to probabilities summing to 1
+        // Source: Bridle (1990); used in multi-class classification output
+        exps = []
+        @ x:v { exps = exps$+ _mat::exp(x) }
+        suma = 0.0
+        @ e:exps { suma = suma + e }
+        res = []
+        @ e:exps { res = res$+ (e / suma) }
+        <~ res
+    }
+}

@@ -1,0 +1,14 @@
+// Test: módulo perdida — mse, bce_escalar, entropia_cruzada_binaria
+<# ../modulos/perdida => per
+
+// MSE: ((0.5)² + 0 + (0.5)²) / 3 = 0.1667
+>> #.4|per::mse([2.5, 3.0, 1.0], [3.0, 3.0, 0.5])| ¶
+
+// BCE escalar: predicción perfecta → pérdida mínima
+// bce(0.99, 1) = -log(0.99) ≈ 0.0101
+>> #.4|per::bce_escalar(0.99, 1.0)| ¶
+// bce(0.01, 0) = -log(0.99) ≈ 0.0101 (simétrico)
+>> #.4|per::bce_escalar(0.01, 0.0)| ¶
+
+// BCE vectorial: promedio de los dos casos anteriores
+>> #.4|per::entropia_cruzada_binaria([0.99, 0.01], [1.0, 0.0])| ¶

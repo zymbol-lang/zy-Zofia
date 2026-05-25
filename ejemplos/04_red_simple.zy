@@ -1,0 +1,112 @@
+// Fase 3: red neuronal que aprende XOR desde cero
+// Arquitectura: 2 → 4 (tanh) → 1 (sigmoid), descenso de gradiente por lote completo
+// Criterio: convergencia en < 1000 épocas
+
+<# ../modulos/activacion => act
+<# ../modulos/perdida    => per
+<# ../modulos/tensor     => ten
+<# std/random            => rng
+
+// Peso aleatorio en [−1, 1]  (rango amplio para romper simetría)
+w_al() { <~ rng::peso_f64() * 10.0 }
+
+// Dataset XOR
+xs = [[0.0, 0.0], [0.0, 1.0], [1.0, 0.0], [1.0, 1.0]]
+ys = [0.0, 1.0, 1.0, 0.0]
+
+// Pesos: W1 [4 × 2], b1 [4], W2 [4], b2 escalar
+W1 = [[w_al(), w_al()], [w_al(), w_al()], [w_al(), w_al()], [w_al(), w_al()]]
+b1 = [w_al(), w_al(), w_al(), w_al()]
+W2 = [w_al(), w_al(), w_al(), w_al()]
+b2 = w_al()
+
+tasa    = 1.5
+epocas  = 1000
+n_batch = xs$#
+nh      = W1$#
+ne      = xs[1]$#
+
+// Forward pass — retorna (z1, a1, z2, yhat)
+// Oculta: tanh (gradiente simétrico, no satura cerca de 0)
+// Salida: sigmoid (interpreta como probabilidad de XOR = 1)
+adelante(x, W1f, b1f, W2f, b2f) {
+    z1 = []
+    @ i:1..(W1f$#) {
+        s = b1f[i]
+        @ j:1..(x$#) { s = s + W1f[i>j] * x[j] }
+        z1 = z1$+ s
+    }
+    a1   = act::tangente_hiperbolica_vec(z1)
+    z2   = b2f
+    @ i:1..(W2f$#) { z2 = z2 + W2f[i] * a1[i] }
+    yhat = act::sigmoide(z2)
+    <~ (z1: z1, a1: a1, z2: z2, yhat: yhat)
+}
+
+// Backward pass — gradientes via regla de la cadena
+// ∂BCE/∂z2 = ŷ − y  (sigmoid + BCE combinados)
+// ∂tanh/∂z1[i] = 1 − a1[i]²  (derivada de tanh usando salida cacheada)
+atras(x, y, a1b, yhatb, W2b) {
+    dz2 = yhatb - y
+    gW2 = []
+    @ i:1..(W2b$#) { gW2 = gW2$+ (dz2 * a1b[i]) }
+    dz1 = []
+    @ i:1..(W2b$#) {
+        da1i   = dz2 * W2b[i]
+        tanh_d = 1.0 - a1b[i] * a1b[i]    // ∂tanh/∂z = 1 − a²
+        dz1 = dz1$+ (da1i * tanh_d)
+    }
+    gW1 = []
+    @ i:1..(W2b$#) {
+        fila = []
+        @ j:1..(x$#) { fila = fila$+ (dz1[i] * x[j]) }
+        gW1 = gW1$+ fila
+    }
+    <~ (gW1: gW1, gb1: dz1, gW2: gW2, gb2: dz2)
+}
+
+>> "Red neuronal XOR  —  2→4(tanh)→1(sigmoid)" ¶
+>> "épocas: " >> epocas >> "   tasa: " >> tasa ¶
+>> "─────────────────────────────────────────" ¶
+
+@ epoca:1..epocas {
+    acW1 = ten::crear([nh, ne], 0.0)
+    acb1 = ten::crear([nh], 0.0)
+    acW2 = ten::crear([nh], 0.0)
+    acb2 = 0.0
+    perdida_total = 0.0
+
+    @ k:1..n_batch {
+        xk    = xs[k]
+        yk    = ys[k]
+        cache = adelante(xk, W1, b1, W2, b2)
+        perdida_total = perdida_total + per::bce_escalar(cache.yhat, yk)
+        g    = atras(xk, yk, cache.a1, cache.yhat, W2)
+        acW1 = ten::sumar(acW1, g.gW1)
+        acb1 = ten::sumar(acb1, g.gb1)
+        acW2 = ten::sumar(acW2, g.gW2)
+        acb2 = acb2 + g.gb2
+    }
+
+    f  = tasa / ##.(n_batch)
+    W1 = ten::restar(W1, ten::multiplicar_escalar(acW1, f))
+    b1 = ten::restar(b1, ten::multiplicar_escalar(acb1, f))
+    W2 = ten::restar(W2, ten::multiplicar_escalar(acW2, f))
+    b2 = b2 - f * acb2
+
+    ? (epoca % 100 == 0) {
+        >> "época " >> epoca >> ":  pérdida = " >> #.4|perdida_total / ##.(n_batch)| ¶
+    }
+}
+
+>> "─────────────────────────────────────────" ¶
+>> "Predicciones finales:" ¶
+@ k:1..n_batch {
+    xk   = xs[k]
+    yk   = ys[k]
+    res  = adelante(xk, W1, b1, W2, b2)
+    pred = ###(res.yhat)       // ### redondea: < 0.5 → 0, ≥ 0.5 → 1
+    >> "  XOR(" >> ###(xk[1]) >> "," >> ###(xk[2]) >> ")"
+    >> "  ŷ = " >> #.3|res.yhat| >> "  →  " >> pred
+    >> "  (esperado: " >> ###(yk) >> ")" ¶
+}
