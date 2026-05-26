@@ -386,6 +386,15 @@
       <a class="nav-item" data-path="docs/05_arquitectura_transformer.md" data-icon="⚡" data-title="Arquitectura Transformer">
         <span class="nav-icon">⚡</span> 05 · Transformer
       </a>
+      <a class="nav-item" data-path="docs/06_retropropagacion_encoder.md" data-icon="∂" data-title="Retropropagación en el Encoder">
+        <span class="nav-icon">∂</span> 06 · Retropropagación
+      </a>
+      <a class="nav-item" data-path="docs/07_clasificador_sentimiento.md" data-icon="💬" data-title="Clasificador de Sentimiento">
+        <span class="nav-icon">💬</span> 07 · Sentimiento
+      </a>
+      <a class="nav-item" data-path="docs/08_decoder_generacion.md" data-icon="✍" data-title="Decoder y Generación">
+        <span class="nav-icon">✍</span> 08 · Generación
+      </a>
     </div>
 
     <div class="sidebar-footer">Zymbol · Zofía v0.0.6</div>
@@ -437,6 +446,21 @@
             <div class="wc-icon">👁</div><div class="wc-title">04 · Atención</div>
             <div class="wc-desc">Q, K, V y scaled dot-product attention.</div>
             <div class="welcome-path">docs/04_...</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('docs/06_retropropagacion_encoder.md','∂','Retropropagación en el Encoder')">
+            <div class="wc-icon">∂</div><div class="wc-title">06 · Retropropagación</div>
+            <div class="wc-desc">Gradientes por layer norm, atención y FFD — el encoder aprende.</div>
+            <div class="welcome-path">docs/06_...</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('docs/07_clasificador_sentimiento.md','💬','Clasificador de Sentimiento')">
+            <div class="wc-icon">💬</div><div class="wc-title">07 · Sentimiento</div>
+            <div class="wc-desc">Tokenización, embeddings, cabeza [CLS] — análisis en español.</div>
+            <div class="welcome-path">docs/07_...</div>
+          </div>
+          <div class="welcome-card" onclick="loadDoc('docs/08_decoder_generacion.md','✍','Decoder y Generación')">
+            <div class="wc-icon">✍</div><div class="wc-title">08 · Generación</div>
+            <div class="wc-desc">Atención cruzada, generación autoregresiva — transformer completo.</div>
+            <div class="welcome-path">docs/08_...</div>
           </div>
         </div>
       </div>
@@ -548,6 +572,9 @@
     '03_redes_neuronales':          ['docs/03_redes_neuronales.md',            '🧠', 'Redes Neuronales'],
     '04_mecanismo_de_atencion':     ['docs/04_mecanismo_de_atencion.md',       '👁', 'Mecanismo de Atención'],
     '05_arquitectura_transformer':  ['docs/05_arquitectura_transformer.md',    '⚡', 'Arquitectura Transformer'],
+    '06_retropropagacion_encoder':  ['docs/06_retropropagacion_encoder.md',    '∂',  'Retropropagación en el Encoder'],
+    '07_clasificador_sentimiento':  ['docs/07_clasificador_sentimiento.md',    '💬', 'Clasificador de Sentimiento'],
+    '08_decoder_generacion':        ['docs/08_decoder_generacion.md',          '✍', 'Decoder y Generación'],
   };
 
   function loadFromHash() {

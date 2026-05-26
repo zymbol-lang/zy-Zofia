@@ -257,14 +257,105 @@ codificador              -- (secuencia, configs) → tensor [N bloques apilados]
 
 ---
 
-## Criterio global de completitud
+## Fase 6 — Retropropagación en el encoder (`modulos/grad_encoder.zy`)
 
-El proyecto Zofía se considera completo cuando:
+**Qué se construye:** gradientes hacia atrás para cada operación del encoder —
+layer norm, atención escalada y feed-forward — con cache del pase adelante.
 
-1. Los 6 documentos de `docs/` explican cada concepto con intuición + matemática + código
-2. Los 6 módulos Zymbol pasan todos sus ejemplos
-3. El ejemplo `06_transformer_encoder.zy` corre de extremo a extremo
-4. Cada función tiene comentario con referencia a su fuente matemática
+**Funciones a implementar:**
+
+```
+_grad_lineal(dY, X, W)                → (dX, dW, db)
+_grad_softmax_filas(dY, P)            → dX
+_grad_layernorm(dY, x, gamma, beta)   → (dx, dgamma, dbeta)
+_grad_atencion_pp(dY, Q, K, V, P)    → (dQ, dK, dV)
+_grad_mha(dY, cache_mha)              → gradientes de pesos Q, K, V, O
+_grad_fad(dY, cache_fad)              → gradientes de W1, b1, W2, b2
+grad_bloque(dY, cache_bloque)         → (dx, grads_pesos)
+```
+
+**Módulo auxiliar:** `modulos/checkpoint.zy`
+```
+guardar(ruta, config)     -- serializa pesos del encoder a JSON
+cargar(ruta)              -- reconstruye config desde JSON
+```
+Usa `lib/file.zy` + `lib/json.zy` (de ZeethyCLI, copiados a `Zofia/lib/`).
+
+**Ejemplos:**
+- `07_entrenar_encoder.zy` — tarea de regresión simple; pérdida ECM disminuye en 20 épocas
+
+**Criterio de aceptación:** la pérdida disminuye cada época durante al menos 20 ciclos.
+
+---
+
+## Fase 7 — Clasificador de sentimiento (`modulos/clasificador.zy`)
+
+**Qué se construye:** pipeline completo texto → encoder → cabeza de clasificación.
+Primer uso de datos reales de texto y del sistema de archivos.
+
+**Módulos nuevos:**
+
+```
+modulos/tokenizador.zy:
+  construir_vocab(oraciones)   → vocab
+  encode(vocab, texto)         → lista de índices
+  decode(vocab, ids)           → texto
+
+modulos/embeddings.zy:
+  crear_tabla(tam_vocab, dim)  → tabla [tam_vocab × dim]
+  lookup(tabla, ids)           → matriz [len × dim]
+  grad_lookup(dY, ids, n)      → grad respecto a la tabla
+
+modulos/clasificador.zy:
+  cabeza_clasificacion(x_cls, W, b) → logits
+  predecir(logits)                  → clase (0 o 1)
+  exactitud(preds, ys)              → escalar
+```
+
+**Dataset:** `datos/sentimiento.txt` — 24 oraciones en español (12 pos, 12 neg),
+formato `oración|etiqueta`, cargado con `lib/file.zy`.
+
+**Ejemplos:**
+- `08_sentimiento.zy` — entrena clasificador; al terminar guarda modelo en `modelos/sentimiento.json`
+
+**Criterio de aceptación:** exactitud ≥ 80% en el conjunto de entrenamiento.
+
+---
+
+## Fase 8 — Decoder y generación (`modulos/decoder.zy`)
+
+**Qué se construye:** el decoder completo del transformer original con atención
+cruzada, generación autoregresiva y muestreo con temperatura.
+
+**Funciones a implementar:**
+
+```
+modulos/decoder.zy:
+  _mascara_causal(n)                              → matriz [n×n]
+  bloque_decoder(x_dec, enc_salida, config_dec)   → tensor
+  decoder(secuencia, enc_salida, configs_dec)     → tensor
+  proyectar_vocab(x, pesos_vocab)                 → logits [seq × vocab]
+  generar(enc_sal, max_tokens, config, vocab, t)  → texto
+```
+
+**Dataset:** `datos/traduccion.txt` — 10 pares español→inglés muy cortos (5–8 palabras).
+
+**Ejemplos:**
+- `09_traducir.zy` — entrena traductor mínimo; genera secuencias con temperatura=0.7
+
+**Criterio de aceptación:** el modelo genera la secuencia correcta en ≥ 7 de 10 pares.
+
+---
+
+## Criterio global de completitud (v2)
+
+El proyecto Zofía v2 se considera completo cuando:
+
+1. Los 9 documentos de `docs/` (00–08) explican cada concepto con intuición + matemática + código Zymbol
+2. Los 9 módulos principales pasan todos sus ejemplos
+3. El ejemplo `09_traducir.zy` corre de extremo a extremo con texto real
+4. Los pesos de los modelos entrenados se guardan y cargan desde disco
+5. Cada función tiene comentario con referencia a su fuente matemática
 
 ---
 
@@ -272,7 +363,8 @@ El proyecto Zofía se considera completo cuando:
 
 - No implementa entrenamiento distribuido
 - No implementa GPU / aceleración hardware
-- No implementa el decoder del transformer (solo encoder)
 - No compite en velocidad con PyTorch — compite en claridad
+- No carga pesos pre-entrenados externos (eso requiere Zymbol v0.0.9+)
 
-La versión 2 de Zofía puede extender cualquiera de estos puntos.
+El camino hacia pesos pre-entrenados (Gemma, DeepSeek) está documentado en
+`ROADMAP_IA.md` y depende del roadmap del intérprete Zymbol v0.0.8–v1.0.
