@@ -8,12 +8,12 @@
 // Proyecta vector x a través de capa (W: matriz, b: sesgo)
 // W tiene forma [m x n]: m neuronas, n entradas
 proyectar(x, W, b) {
-    _n = x$#
-    _m = W$#
+    n = x$#
+    m = W$#
     salida = []
-    @ j:1.._m {
+    @ j:1..m {
         suma = b[j]
-        @ i:1.._n { suma = suma + x[i] * W[j>i] }
+        @ i:1..n { suma = suma + x[i] * W[j>i] }
         salida = salida$+ suma
     }
     <~ salida

@@ -16,12 +16,12 @@ col_j(m, j) {
 }
 
 producto_mat(A, B) {
-    _fils = A$#
-    _cols = B[1]$#
+    fils = A$#
+    cols = B[1]$#
     C = []
-    @ i:1.._fils {
+    @ i:1..fils {
         fila_c = []
-        @ j:1.._cols {
+        @ j:1..cols {
             fila_c = fila_c$+ produc_punto(A[i], col_j(B, j))
         }
         C = C$+ fila_c
