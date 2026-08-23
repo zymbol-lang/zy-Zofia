@@ -71,7 +71,7 @@ _id4() {
         [0.0, 0.0, 0.0, 1.0]]
 }
 
-config = (num_cabezas: 2,
+config = #(num_cabezas: 2,
           dim_modelo:  4,
           pesos_q:     _id4(),
           pesos_k:     _id4(),

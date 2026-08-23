@@ -40,7 +40,7 @@ adelante(x, W1f, b1f, W2f, b2f) {
     z2   = b2f
     @ i:1..(W2f$#) { z2 = z2 + W2f[i] * a1[i] }
     yhat = act::sigmoide(z2)
-    <~ (z1: z1, a1: a1, z2: z2, yhat: yhat)
+    <~ #(z1: z1, a1: a1, z2: z2, yhat: yhat)
 }
 
 // Pase hacia atrás — gradientes via regla de la cadena
@@ -62,7 +62,7 @@ atras(x, y, a1b, yhatb, W2b) {
         @ j:1..(x$#) { fila = fila$+ (dz1[i] * x[j]) }
         gW1 = gW1$+ fila
     }
-    <~ (gW1: gW1, gb1: dz1, gW2: gW2, gb2: dz2)
+    <~ #(gW1: gW1, gb1: dz1, gW2: gW2, gb2: dz2)
 }
 
 >> "Red neuronal XOR  —  2→4(tanh)→1(sigmoide)" ¶

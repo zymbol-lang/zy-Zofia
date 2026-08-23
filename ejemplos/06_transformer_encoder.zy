@@ -70,7 +70,7 @@ _config_bloque(dm, nh, dff) {
     pff2 = _ceros(dff, dm)       // FAD capa 2: dff → dm
     sff2 = _ceros_vec(dm)
 
-    <~ (num_cabezas: nh,
+    <~ #(num_cabezas: nh,
         dim_modelo:  dm,
         pesos_q:     _identidad(dm),
         pesos_k:     _identidad(dm),

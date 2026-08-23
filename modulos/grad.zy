@@ -15,7 +15,7 @@
     variable(valor, nombre) {
         // Crea una variable escalar con acumulador de gradiente inicializado a 0
         // Fuente: Baydin et al. (2018), Automatic Differentiation in Machine Learning
-        <~ (valor: valor, grad: 0.0, nombre: nombre)
+        <~ #(valor: valor, grad: 0.0, nombre: nombre)
     }
 
     gradiente_de(v) {
