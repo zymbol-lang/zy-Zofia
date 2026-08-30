@@ -1,4 +1,3 @@
-// @vm-skip
 // Test: operaciones elemento a elemento sobre tensores (vectores)
 
 sumar_vec(a, b) {

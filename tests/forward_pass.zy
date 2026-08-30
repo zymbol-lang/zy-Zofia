@@ -1,4 +1,3 @@
-// @vm-skip
 // Test: forward pass de red neuronal de 2 capas
 // Arquitectura: entrada(2) -> oculta(3) -> salida(1)
 // Activacion oculta: tanh | Activacion salida: sigmoid

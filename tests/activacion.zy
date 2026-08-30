@@ -1,4 +1,3 @@
-// @vm-skip
 // Test: funciones de activación usando std/math nativo (G3 implementado)
 
 <# std/math => mat

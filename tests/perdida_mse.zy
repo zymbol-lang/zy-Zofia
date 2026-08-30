@@ -1,4 +1,3 @@
-// @vm-skip
 // Test: MSE loss y su gradiente
 
 mse(pred, obj) {

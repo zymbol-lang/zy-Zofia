@@ -1,4 +1,3 @@
-// @vm-skip
 // Test: multiplicación matricial general n×n
 
 produc_punto(a, b) {

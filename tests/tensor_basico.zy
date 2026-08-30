@@ -1,4 +1,3 @@
-// @vm-skip
 // Test: crear tensores, acceso profundo, y actualización con $~
 
 ceros(n) {
