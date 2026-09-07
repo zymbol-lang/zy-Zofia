@@ -36,10 +36,10 @@ salida_pp = atn::atencion_producto_punto(Q, K, V)
 
 // Con V = identidad, las filas de la salida son directamente los pesos de atención.
 // Propiedad del softmax: cada fila suma exactamente 1
->> "   Suma fila 1: " >> #.4|(salida_pp[1][1]+salida_pp[1][2]+salida_pp[1][3]+salida_pp[1][4])| ¶
->> "   Suma fila 2: " >> #.4|(salida_pp[2][1]+salida_pp[2][2]+salida_pp[2][3]+salida_pp[2][4])| ¶
->> "   Suma fila 3: " >> #.4|(salida_pp[3][1]+salida_pp[3][2]+salida_pp[3][3]+salida_pp[3][4])| ¶
->> "   Suma fila 4: " >> #.4|(salida_pp[4][1]+salida_pp[4][2]+salida_pp[4][3]+salida_pp[4][4])| ¶
+>> "   Suma fila 1: " >> #.4|(salida_pp[1>1]+salida_pp[1>2]+salida_pp[1>3]+salida_pp[1>4])| ¶
+>> "   Suma fila 2: " >> #.4|(salida_pp[2>1]+salida_pp[2>2]+salida_pp[2>3]+salida_pp[2>4])| ¶
+>> "   Suma fila 3: " >> #.4|(salida_pp[3>1]+salida_pp[3>2]+salida_pp[3>3]+salida_pp[3>4])| ¶
+>> "   Suma fila 4: " >> #.4|(salida_pp[4>1]+salida_pp[4>2]+salida_pp[4>3]+salida_pp[4>4])| ¶
 
 // ─── Atención enmascarada (causal) ───────────────────────────────────────────
 >> "¶" ¶
@@ -53,11 +53,11 @@ mascara = [[#1, #0, #0, #0],
 
 salida_mask = atn::atencion_enmascarada(Q, K, V, mascara)
 >> "   Forma salida: " >> (salida_mask$#) >> " filas × " >> (salida_mask[1]$#) >> " cols" ¶
->> "   Suma fila 1: " >> #.4|(salida_mask[1][1]+salida_mask[1][2]+salida_mask[1][3]+salida_mask[1][4])| ¶
->> "   Suma fila 4: " >> #.4|(salida_mask[4][1]+salida_mask[4][2]+salida_mask[4][3]+salida_mask[4][4])| ¶
+>> "   Suma fila 1: " >> #.4|(salida_mask[1>1]+salida_mask[1>2]+salida_mask[1>3]+salida_mask[1>4])| ¶
+>> "   Suma fila 4: " >> #.4|(salida_mask[4>1]+salida_mask[4>2]+salida_mask[4>3]+salida_mask[4>4])| ¶
 
 // El token 1 con máscara causal solo se atiende a sí mismo → salida = V[1] = [1,0,0,0]
->> "   Fila 1 (solo atiende token 1): " >> #.4|salida_mask[1][1]| >> " " >> #.4|salida_mask[1][2]| >> " " >> #.4|salida_mask[1][3]| >> " " >> #.4|salida_mask[1][4]| ¶
+>> "   Fila 1 (solo atiende token 1): " >> #.4|salida_mask[1>1]| >> " " >> #.4|salida_mask[1>2]| >> " " >> #.4|salida_mask[1>3]| >> " " >> #.4|salida_mask[1>4]| ¶
 
 // ─── Atención multi-cabeza (2 cabezas, dim=4) ─────────────────────────────────
 >> "¶" ¶

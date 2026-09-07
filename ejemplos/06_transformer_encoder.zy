@@ -111,8 +111,8 @@ salida = tfm::codificador(secuencia, configs)
 // Muestra de los valores de salida para confirmar que son razonables
 >> "¶" ¶
 >> "4. Muestra de salida" ¶
->> "   Token 1: [" >> #.4|salida[1][1]| >> ", " >> #.4|salida[1][2]| >> ", " >> #.4|salida[1][3]| >> ", " >> #.4|salida[1][4]| >> "]" ¶
->> "   Token 5: [" >> #.4|salida[5][1]| >> ", " >> #.4|salida[5][2]| >> ", " >> #.4|salida[5][3]| >> ", " >> #.4|salida[5][4]| >> "]" ¶
+>> "   Token 1: [" >> #.4|salida[1>1]| >> ", " >> #.4|salida[1>2]| >> ", " >> #.4|salida[1>3]| >> ", " >> #.4|salida[1>4]| >> "]" ¶
+>> "   Token 5: [" >> #.4|salida[5>1]| >> ", " >> #.4|salida[5>2]| >> ", " >> #.4|salida[5>3]| >> ", " >> #.4|salida[5>4]| >> "]" ¶
 
 >> "¶" ¶
 >> "━━━ Fase 5 completada ━━━" ¶
