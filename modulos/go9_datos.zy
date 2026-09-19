@@ -1,0 +1,78 @@
+# go9_datos {
+    #> {
+        jugadas
+        es_tablero_9
+        particion_de
+    }
+
+    // El formato kifu v1 guarda cada jugada como:
+    //   <ply> <B|W> <coord|pass> ms=<n> caps=<n>
+    // Esta capa solo interpreta el registro. La reconstrucción del tablero
+    // pertenece al exportador, que usa el motor de GO para aplicar capturas.
+    _color(texto) {
+        ? texto == "B" { <~ 1 }
+        <~ 2
+    }
+
+    // Una letra que no esté en el alfabeto da 0, y con ella el punto cae
+    // fuera de 1..81. No se valida aquí: el exportador pasa cada punto por
+    // `合法` antes de aplicarlo, y una partida que no se puede reproducir se
+    // descarta entera. Validar dos veces daría dos respuestas que mantener.
+    _columna(letra) {
+        alfabeto = "ABCDEFGHJ"
+        indice = 0
+        @ actual:alfabeto {
+            indice = indice + 1
+            ? actual == letra { <~ indice }
+        }
+        <~ 0
+    }
+
+    _punto(texto) {
+        ? texto == "pass" { <~ 82 }
+        columna = _columna(texto[1])
+        fila = #|texto$[2..-1]|
+        <~ (fila - 1) * 9 + columna
+    }
+
+    // Devuelve diccionarios homogéneos con color y objetivo. Ignora cabeceras,
+    // separadores y cualquier línea que no comience con un número de jugada.
+    jugadas(texto) {
+        resultado = []
+        @ linea:(texto $/ '\n') {
+            partes = linea $/ ' '
+            ? (partes$#) >= 3 {
+                turno = #|partes[1]|
+                ? (turno#?)[1] == "###" {
+                    resultado = resultado$+ #(
+                        color: _color(partes[2]),
+                        objetivo: _punto(partes[3])
+                    )
+                }
+            }
+        }
+        <~ resultado
+    }
+
+    es_tablero_9(texto) {
+        @ linea:(texto $/ '\n') {
+            ? linea == "board 9" { <~ #1 }
+        }
+        <~ #0
+    }
+
+    // La separación depende de la identidad completa de una partida. Así, todos
+    // sus prefijos quedan juntos, pero una ejecución larga no monopoliza un
+    // subconjunto completo.
+    particion_de(ejecucion, partida) {
+        // El módulo se reduce al final. Reducirlo a 100 en cada carácter hace
+        // que las marcas de tiempo, con prefijos casi iguales, se agrupen.
+        h = 7
+        identidad = ejecucion "/" partida
+        @ caracter:identidad { h = (h * 131 + ##!caracter) % 2147483647 }
+        cubeta = h % 100
+        ? cubeta < 80 { <~ "train" }
+        ? cubeta < 90 { <~ "valid" }
+        <~ "test"
+    }
+}

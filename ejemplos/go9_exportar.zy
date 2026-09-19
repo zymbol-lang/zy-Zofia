@@ -1,0 +1,145 @@
+// Estudio GO 9×9: exporta pares (tablero antes de la jugada, siguiente jugada)
+// en JSONL. Ejecutar desde la raíz del espacio de trabajo:
+//   zymbol run --vm Zofia/ejemplos/go9_exportar.zy
+// Opcionalmente: <origen de games> <archivo de salida>
+//
+// El nombre no lleva número de fase a propósito: el estudio de GO no es una
+// de las fases del curso, y los números 07–09 están reservados para las
+// fases 6–8 en HOJA_DE_RUTA.md.
+//
+// Contrato zofia-go9-v2. Cada fila es un ejemplo supervisado:
+//   board   81 casillas, 0 vacío · 1 negro · 2 blanco, ANTES de la jugada
+//   color   quién mueve
+//   ko      punto prohibido por ko para esta jugada, 0 si ninguno; no se
+//           deduce del tablero, y sin él hay jugadas ilegales indistinguibles
+//   target  1–81 el punto, 82 el paso
+//   split   train/valid/test, función de la partida y de nada más
+//
+// El corpus son partidas de la IA heurística de zy-GO jugando contra sí
+// misma. Un modelo entrenado aquí imita esa heurística; no aprende go.
+
+<# std/io => io
+<# std/json => json
+<# ../modulos/go9_datos => datos
+<# ../../GO/核/盤 => tablero_go
+<# ../../GO/核/規則 => reglas_go
+
+>< argumentos
+
+origen = "GO/games"
+salida = "Zofia/datos/go9/movimientos.jsonl"
+? (argumentos$#) >= 1 { origen = argumentos[1] }
+? (argumentos$#) >= 2 { salida = argumentos[2] }
+
+// El directorio se saca de la ruta que se va a escribir. Crear uno fijo
+// mientras se escribe en otro deja un directorio vacío donde no toca y
+// falla donde sí importa.
+_directorio_de(ruta) {
+    partes = ruta $/ '/'
+    n = partes$#
+    directorio = ""
+    indice = 0
+    @ parte:partes {
+        indice = indice + 1
+        ? indice < n {
+            ? indice == 1 { directorio = parte } _ { directorio = directorio "/" parte }
+        }
+    }
+    ? directorio == "" { ? n > 1 { <~ "/" } <~ "." }
+    <~ directorio
+}
+
+io::mkdir(_directorio_de(salida))
+io::write(salida, "")
+
+total = 0
+partidas = 0
+descartadas = 0
+entrenamiento = 0
+validacion = 0
+prueba = 0
+
+ejecuciones = io::list(origen)
+? ejecuciones$! {
+    >> "No se puede leer el corpus: " origen ¶
+} _ {
+    @ ejecucion:ejecuciones {
+        ruta_ejecucion = origen "/" ejecucion
+        archivos = io::list(ruta_ejecucion)
+        ? archivos$! { @> }
+
+        @ archivo:archivos {
+            ? !(archivo $? ".kifu") { @> }
+
+            texto = io::read(ruta_ejecucion "/" archivo)
+            ? texto$! { @> }
+            ? !(datos::es_tablero_9(texto)) { @> }
+            particion = datos::particion_de(ejecucion, archivo)
+            registros = datos::jugadas(texto)
+
+            // Una partida se exporta entera o no se exporta. Si una jugada no
+            // se puede reproducir, el tablero deja de avanzar y todo lo que
+            // sigue sería una posición que nadie jugó; escribir el prefijo y
+            // callarse la rotura es fabricar ejemplos.
+            lineas = []
+            tablero = tablero_go::新規(9)
+            ko = 0
+            ply = 0
+            completa = #1
+
+            @ registro:registros {
+                ply = ply + 1
+                ejemplo = #(
+                    version: "zofia-go9-v2",
+                    split: particion,
+                    run: ejecucion,
+                    game: archivo,
+                    ply: ply,
+                    color: registro.color,
+                    board: tablero,
+                    ko: ko,
+                    target: registro.objetivo
+                )
+                lineas = lineas$+ json::encode(ejemplo)
+
+                ? registro.objetivo == 82 {
+                    ko = 0
+                } _ {
+                    capturas = 0
+                    siguiente_ko = 0
+                    legal = reglas_go::合法(tablero, 9, registro.objetivo,
+                        registro.color, ko)
+                    ? !legal {
+                        completa = #0
+                        @!
+                    }
+                    estado = tablero_go::着手(tablero<~, 9, registro.objetivo,
+                        registro.color, capturas<~, siguiente_ko<~)
+                    ? estado <> tablero_go.可 {
+                        completa = #0
+                        @!
+                    }
+                    ko = siguiente_ko
+                }
+            }
+
+            ? completa {
+                @ linea:lineas { io::append(salida, linea "\n") }
+                escritas = lineas$#
+                total = total + escritas
+                partidas = partidas + 1
+                ? particion == "train" { entrenamiento = entrenamiento + escritas }
+                _? particion == "valid" { validacion = validacion + escritas }
+                _ { prueba = prueba + escritas }
+            } _ {
+                descartadas = descartadas + 1
+            }
+        }
+    }
+}
+
+>> "GO 9x9 exportado — contrato zofia-go9-v2" ¶
+>> "  partidas: " partidas "  descartadas: " descartadas ¶
+>> "  ejemplos: " total ¶
+>> "  train: " entrenamiento "  valid: " validacion "  test: " prueba ¶
+>> "  salida: " salida ¶

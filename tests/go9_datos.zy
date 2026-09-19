@@ -1,0 +1,78 @@
+// Test: módulo go9_datos — lectura del kifu v1 y partición determinista.
+//
+// Aquí se prueba SOLO lo que go9_datos afirma: interpretar un registro de
+// kifu y repartir partidas entre train/valid/test. La reconstrucción del
+// tablero —capturas y ko— es del motor de GO y se prueba allí, en
+// GO/試験/棋譜試験.zy, donde GO está dentro de su propio árbol. Un test de
+// Zofía que importara GO dejaría de correr en cualquier copia del árbol de
+// Zofía sola, que es justo lo que los arneses hacen.
+//
+// La tabla de grafías de abajo es una mitad de un contrato: aquí se lee
+// "B2" → 11, y en GO/試験/棋譜試験.zy se escribe 11 → "B2". Quien cambie
+// una de las dos tiene que mirar la otra.
+<# ../modulos/go9_datos => datos
+
+kifu = "# zy-GO kifu v1
+run 20260722_072423_GO9x9
+board 9
+komi 6.5
+seed 424242
+black level=3 personality=territorial
+white level=3 personality=influential
+---
+1 B B2 ms=1 caps=0
+2 W A2 ms=1 caps=0
+3 B pass ms=1 caps=0
+4 W C2 ms=1 caps=0
+5 B pass ms=1 caps=0
+6 W B3 ms=1 caps=0
+7 B pass ms=1 caps=0
+8 W B1 ms=1 caps=1
+---
+result W+2.5
+"
+
+// La cabecera no aporta registros: `black level=3 personality=territorial`
+// tiene tres campos como una jugada, y aun así se descarta porque el primero
+// no es un número de jugada.
+registros = datos::jugadas(kifu)
+>> "jugadas=" (registros$#) ¶
+
+// Colores: B es 1, W es 2 — los mismos números que usa el tablero de GO.
+>> "colores=" registros[1].color ":" registros[2].color ¶
+
+// Grafías. El punto es (fila − 1) × 9 + columna, con las columnas ABCDEFGHJ
+// —sin la I— y las filas contadas como las escribe el kifu.
+>> "B2=" registros[1].objetivo ¶
+>> "A2=" registros[2].objetivo ¶
+>> "C2=" registros[4].objetivo ¶
+>> "B3=" registros[6].objetivo ¶
+>> "B1=" registros[8].objetivo ¶
+
+// Las esquinas y el paso, que son los bordes del rango 1–82.
+esquinas = datos::jugadas("1 B A1 ms=0 caps=0
+2 W J9 ms=0 caps=0
+3 B J1 ms=0 caps=0
+4 W A9 ms=0 caps=0")
+>> "A1=" esquinas[1].objetivo ¶
+>> "J9=" esquinas[2].objetivo ¶
+>> "J1=" esquinas[3].objetivo ¶
+>> "A9=" esquinas[4].objetivo ¶
+>> "pass=" registros[3].objetivo ¶
+
+// Sólo se exportan partidas de 9×9; el resto del corpus es de 19×19.
+>> "tablero9=" datos::es_tablero_9(kifu) ¶
+>> "tablero19=" datos::es_tablero_9("# zy-GO kifu v1
+board 19
+---
+") ¶
+
+// La partición es función de la identidad de la partida y de nada más, así
+// que todos los prefijos de una partida caen del mismo lado. Los valores
+// concretos están en el golden a propósito: cambiar el reparto cambia qué
+// partidas quedan en validación, y eso no debe pasar en silencio.
+>> "partición=" datos::particion_de("20260722_072423_GO9x9", "0001.kifu") ¶
+>> "estable=" (datos::particion_de("20260722_072423_GO9x9", "0001.kifu") == datos::particion_de("20260722_072423_GO9x9", "0001.kifu")) ¶
+>> "valid=" datos::particion_de("20260722_072423_GO9x9", "0016.kifu") ¶
+>> "test=" datos::particion_de("20260722_072423_GO9x9", "0018.kifu") ¶
+>> "otra ejecución=" datos::particion_de("20260724_194322_GO9x9", "0001.kifu") ¶
