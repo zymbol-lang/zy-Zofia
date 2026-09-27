@@ -4,8 +4,6 @@
 // Fuente: Vaswani et al. (2017), "Attention Is All You Need"
 
 <# ../modulos/atencion => atn
-<# ../modulos/tensor   => ten
-<# std/math            => mat
 
 >> "━━━ Fase 4: Mecanismo de Atención ━━━" ¶
 
