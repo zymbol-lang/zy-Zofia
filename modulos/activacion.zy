@@ -76,10 +76,13 @@
     }
 
     softmax(v) {
-        // softmax(v)ᵢ = e^vᵢ / Σⱼ e^vⱼ — convierte puntuaciones en probabilidades que suman 1
+        // Softmax estable: exp(xᵢ - max(v)) / Σⱼ exp(xⱼ - max(v)).
+        // Restar el máximo no cambia las probabilidades y evita inf/inf.
         // Fuente: Bridle (1990); usada en clasificación multiclase y mecanismos de atención
+        maximo = v[1]
+        @ x:v { ? x > maximo { maximo = x } }
         exps = []
-        @ x:v { exps = exps$+ _mat::exp(x) }
+        @ x:v { exps = exps$+ _mat::exp(x - maximo) }
         suma = 0.0
         @ e:exps { suma = suma + e }
         res = []

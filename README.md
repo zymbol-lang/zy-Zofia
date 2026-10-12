@@ -112,9 +112,6 @@ Zofia/
     06_retropropagacion_encoder.md   — Gradientes a través del transformer
     07_clasificador_sentimiento.md   — Tarea real: clasificación de texto
     08_decoder_generacion.md         — Decoder, atención cruzada, generación
-  lib/                   — Módulos de I/O (de ZeethyCLI)
-    file.zy              — Leer/escribir archivos
-    json.zy              — Serializar/deserializar JSON
   modulos/
     tensor.zy            — FASE 1: operaciones tensoriales
     grad.zy              — FASE 2: variables con gradiente, SGD
@@ -122,16 +119,7 @@ Zofia/
     perdida.zy           — FASE 3: MSE, BCE, entropía cruzada
     atencion.zy          — FASE 4: scaled dot-product + multi-head attention
     transformador.zy     — FASE 5: encoder completo con PE y layer norm
-    grad_encoder.zy      — FASE 6: retropropagación por todos los bloques
-    tokenizador.zy       — FASE 7-8: tokenización a nivel de palabra
-    embeddings.zy        — FASE 7-8: tabla de embeddings + grad lookup
-    clasificador.zy      — FASE 7: cabeza de clasificación
-    checkpoint.zy        — FASE 6-8: guardar/cargar pesos en JSON
-    decoder.zy           — FASE 8: decoder + atención cruzada + generación
-  datos/
-    sentimiento.txt      — 24 oraciones etiquetadas (positivo/negativo)
-    traduccion.txt       — 10 pares español→inglés simplificados
-  modelos/               — Pesos entrenados (generados, no versionados)
+    go9_datos.zy         — ESTUDIO GO: lectura del kifu v1 y partición por partida
   ejemplos/
     01_tensor_basico.zy
     02_producto_matricial.zy
@@ -139,13 +127,19 @@ Zofia/
     04_red_simple.zy           — XOR con tanh+sigmoid, converge en <100 épocas
     05_atencion_simple.zy      — atención sobre 4 tokens, sumas = 1 por fila
     06_transformer_encoder.zy  — encoder 5 tokens × dim=4, 2 capas, 2 cabezas
-    07_entrenar_encoder.zy     — encoder que aprende (pérdida disminuye)
-    08_sentimiento.zy          — clasificador positivo/negativo, exactitud ≥80%
-    09_traducir.zy             — traductor mínimo, genera secuencias correctas
+    go9_exportar.zy            — exporta posiciones 9×9 de zy-GO a JSONL
   tests/
-    tensor_basico.zy / .expected
-    ... (un par por fase)
+    un .zy y su .expected por módulo; los corre ZyQuality
+  datos/
+    go9/                 — dataset derivado del exportador, no se versiona
 ```
+
+Lo que **aún no existe** y las fases 6–8 traerán: `modulos/grad_encoder.zy`,
+`tokenizador.zy`, `embeddings.zy`, `clasificador.zy`, `checkpoint.zy`,
+`decoder.zy`; `ejemplos/07_entrenar_encoder.zy`, `08_sentimiento.zy`,
+`09_traducir.zy`; `datos/sentimiento.txt`, `datos/traduccion.txt`; y
+`modelos/` para los pesos entrenados. `docs/06`–`08` describen esas fases
+antes de construirlas, que es el orden que pide HOJA_DE_RUTA.md.
 
 ---
 
@@ -159,6 +153,7 @@ Zofia/
 | 3 — Activaciones + Pérdida | `activacion.zy`, `perdida.zy` | `04` | ✅ Completo |
 | 4 — Atención | `atencion.zy` | `05` | ✅ Completo |
 | 5 — Encoder transformer | `transformador.zy` | `06` | ✅ Completo |
+| Estudio GO 9×9 — Datos | `go9_datos.zy` | `go9_exportar` | ✅ Exportador reproducible |
 | 6 — Retropropagación | `grad_encoder.zy`, `checkpoint.zy` | `07` | 🔲 Pendiente |
 | 7 — Clasificador | `tokenizador.zy`, `embeddings.zy`, `clasificador.zy` | `08` | 🔲 Pendiente |
 | 8 — Decoder | `decoder.zy` | `09` | 🔲 Pendiente |
@@ -168,6 +163,40 @@ Zofia/
 - Pesos de atención suman exactamente 1 por fila (propiedad del softmax)
 - Encoder preserva dimensiones: 5 tokens × dim=4 entra y sale igual
 - Máscara causal bloquea posiciones futuras correctamente
+
+## Estudio GO 9×9
+
+`ejemplos/go9_exportar.zy` transforma los kifu de `GO/games/` en JSONL para una
+tarea de siguiente jugada — contrato **zofia-go9-v2**. Cada fila guarda el
+tablero **antes** de la jugada, el color, el punto prohibido por ko, el objetivo
+1–81 (82 = `pass`) y una partición `train`/`valid`/`test` determinista por
+partida.
+
+```bash
+zymbol run --vm Zofia/ejemplos/go9_exportar.zy
+# 361 partidas · 39.155 ejemplos · train 31.969 · valid 3.750 · test 3.436
+```
+
+Tres cosas que el contrato afirma, y una que no:
+
+- **Las capturas se reconstruyen con el motor de GO.** El `caps` del kifu dice
+  cuántas piedras salieron, nunca cuáles: escribir las coordenadas sobre un
+  arreglo plano deja las piedras capturadas en el tablero e inventa posiciones
+  que nadie jugó. Ver IDEA-Z010 en HALLAZGOS.md.
+- **El ko va en cada fila.** No se deduce del tablero, y sin él hay 491
+  posiciones donde una jugada aparentemente legal estaba prohibida.
+- **Una partida se exporta entera o no se exporta.** Si una jugada no se puede
+  reproducir, todo lo que la sigue sería una posición falsa; la partida se
+  descarta y el contador lo dice.
+- **Lo que no afirma:** el corpus son partidas de la IA heurística de zy-GO
+  contra sí misma. Un modelo entrenado aquí imita esa heurística, no aprende
+  go, y Zofía sigue sin tener un LLM.
+
+`Zofia/datos/go9/movimientos.jsonl` es derivado y no se versiona. Tampoco se
+versiona su materia prima: `GO/games/` está en el `.gitignore` de zy-GO, así que
+reproducir el dataset exige generar antes las partidas con `zymbol run 棋戦.zy`
+desde `GO/`. El siguiente paso es una cabeza clasificadora de 82 clases
+entrenable sobre este contrato.
 
 ---
 

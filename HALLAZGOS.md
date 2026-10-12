@@ -70,6 +70,51 @@ mejorar el lenguaje.
 
 ---
 
+## IDEA — Estudio de política de GO
+
+### IDEA-Z010 · Un kifu requiere replay para convertirse en posiciones — APLICADA
+
+- **Módulo:** `modulos/go9_datos.zy`, `ejemplos/go9_exportar.zy`
+- **Contexto:** preparación de la tarea supervisada «tablero → siguiente jugada»
+  a partir de `GO/games/`.
+- **Hallazgo:** una línea kifu conserva la coordenada y el número de capturas,
+  pero no las coordenadas de las piedras retiradas. Aplicar coordenadas sobre un
+  arreglo plano deja piedras capturadas en el tablero y fabrica ejemplos falsos.
+- **Decisión:** el exportador importa el motor de GO y llama
+  `tablero_go::着手(tablero<~, …)` para cada registro. Así el tablero guardado
+  antes de cada objetivo respeta capturas y ko: `reglas_go::合法` consume el ko
+  previo y `tablero_go::着手` produce el siguiente. El contrato se comparte con
+  el juego que produjo el corpus. La capa española `api/espanol` sigue siendo útil
+  para operaciones sin salida mutable, pero hoy no conserva los marcadores
+  `<~` de `jugar`; se evita en este camino hasta que el reexport los transporte.
+- **Partición:** `particion_de(run, partida)` usa la identidad completa de la
+  partida. Todos sus prefijos quedan juntos; separar por línea filtraría el
+  futuro de una partida al entrenamiento, y separar por ejecución completa
+  concentraría las ejecuciones largas en un solo subconjunto.
+- **Dónde se prueba qué.** El test de Zofía prueba lo que Zofía afirma —leer un
+  registro y repartir partidas— y no importa GO: un test que lo hiciera dejaría
+  de correr en cualquier copia del árbol de Zofía sola, que es exactamente lo
+  que hacen los arneses (ZyFmtCheck formatea una copia y vuelve a correr la
+  suite desde ahí, y allí `../../GO` no existe). El replay con captura es una
+  afirmación sobre el motor de GO y vive en `GO/試験/棋譜試験.zy`, dentro del
+  árbol de GO. Las dos mitades de la grafía —«B2» → 11 en Zofía, 11 → «B2» en
+  GO— están escritas una en cada test, y cada una nombra a la otra.
+- **Contrato `zofia-go9-v2`.** El `v1` no guardaba el ko, que no se deduce del
+  tablero: 491 de los 39.155 ejemplos tienen un punto prohibido que ninguna
+  columna declaraba. Además una partida se exporta entera o no se exporta — el
+  `v1` escribía el ejemplo antes de comprobar la jugada, así que una jugada
+  irreproducible habría dejado escrito un prefijo válido seguido de posiciones
+  que nadie jugó. Hoy son 0 partidas descartadas de 361.
+- **Coste:** el dataset JSONL es derivado y no se versiona; su materia prima
+  tampoco (`GO/games/` está en el `.gitignore` de zy-GO). Se reconstruye con
+  `zymbol run --vm Zofia/ejemplos/go9_exportar.zy`, en 0,7 s, byte a byte igual
+  en el árbol-caminante y en la VM.
+- **Límite declarado:** el corpus es autojuego de la IA heurística de zy-GO. Lo
+  que un modelo aprenda aquí es esa heurística.
+- **Estado:** aplicada 2026-09-14, cerrada 2026-09-18.
+
+---
+
 ## BUG — Comportamiento incorrecto en funcionalidad existente
 
 Funcionalidades que Zymbol declara soportar pero que fallan en condiciones

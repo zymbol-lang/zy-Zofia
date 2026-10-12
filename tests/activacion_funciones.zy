@@ -26,3 +26,8 @@ s = act::softmax([1.0, 1.0, 1.0])
 >> #.4|s[1]| ¶
 >> #.4|s[2]| ¶
 >> #.4|s[3]| ¶
+
+// Softmax debe permanecer finito aun con logits grandes.
+estable = act::softmax([1000.0, 999.0])
+>> #.4|estable[1]| ¶
+>> #.4|estable[2]| ¶
