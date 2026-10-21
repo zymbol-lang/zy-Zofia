@@ -159,7 +159,7 @@ pero que Zymbol aún no implementa.
 | ~~[GAP-Z002](#gap-z002--sin-constantes-matemáticas)~~ | ~~todos los módulos~~ | ~~`π` y `e` como constantes nativas o de biblioteca~~ | ~~3~~ | resuelto v0.0.6 |
 | ~~[GAP-Z003](#gap-z003--sin-generación-de-números-aleatorios-nativa)~~ | ~~`transformador.zy`~~ | ~~Inicialización aleatoria de pesos sin BashExec por llamada~~ | ~~5~~ | resuelto v0.0.6 |
 | ~~GAP-Z004~~ | ~~`tensor.zy`, todos~~ | ~~`0.33333333...` — sin control de decimales al imprimir~~ | ~~1~~ | resuelto v0.0.5 |
-| [GAP-Z005](#gap-z005--rendimiento-de-listas-anidadas-para-tensores) | `tensor.zy` | Acceso `lista[i][j]` es O(n) en listas de listas | 1 | anticipado |
+| [GAP-Z005](#gap-z005--rendimiento-de-listas-anidadas-para-tensores) | `tensor.zy` | Acceso `lista[i][j]` es O(n) en listas de listas | 1 | **cerrado** — verificado 2026-10-21: `m[i>j]` cuesta lo mismo en 50×50 que en 200×200 (`--count`, `zytw` y `zyvm`, 0 copias); `m[i][j]` no existe desde v0.0.9 |
 | ~~[GAP-Z006](#gap-z006--actualización-profunda-canónica-arrij-val)~~ | ~~`tensor.zy`, `grad.zy`~~ | ~~`arr[i>j]$~ val` — deep update consistente con la lectura profunda~~ | ~~1~~ | resuelto v0.0.6 |
 | ~~[GAP-Z007](#gap-z007--no-soporta-en-tuplas-nombradas)~~ | ~~`grad.zy`~~ | ~~`$~` no funciona sobre `Value::NamedTuple`~~ | ~~2~~ | resuelto v0.0.6 |
 | ~~[GAP-Z008](#gap-z008--inferencia-de-tipo-monomorfa-bloquea-funciones-numéricas-mixtas)~~ | ~~todos~~ | ~~Parámetros aritméticos fijados como `Int`; llamadas Float fallan~~ | ~~1~~ | resuelto v0.0.6 |
@@ -444,7 +444,7 @@ Mejoras inspiradas directamente en la experiencia de construir Zofía.
 | ID | Área | Resumen | Fase que la inspira | Estado |
 |----|------|---------|---------------------|--------|
 | ~~[IDEA-Z001](#idea-z001--módulo-stdmath)~~ | stdlib | ~~`std/math`: sqrt, exp, ln, sin, cos, pow, abs en Rust~~ | 3–5 | resuelto v0.0.6 |
-| [IDEA-Z002](#idea-z002--formato-de-punto-flotante-en-) | sintaxis | `>>` con control de decimales: `>> x :#4f` | 1 | propuesto |
+| [IDEA-Z002](#idea-z002--formato-de-punto-flotante-en-) | sintaxis | `>>` con control de decimales: `>> x :#4f` | 1 | **cubierta** por formas que ya existen — verificado 2026-10-21 en los 3 motores: `#.4\|x\|` → `0.3333`, `#^.2\|x\|` → `3.33e-1`, `#.0\|x\|` → `0`. La sintaxis `:#Nf` no se adoptó |
 | ~~[IDEA-Z003](#idea-z003--map-funcional-sobre-listas)~~ | operadores | ~~`lista $@ fn` — map funcional~~ | 1 | descartado |
 | [IDEA-Z004](#idea-z004--input-tipado-con-restricciones) | sintaxis | `<< :###4` — restricción de tipo y longitud en el operador de lectura | cualquiera | propuesto |
 
@@ -537,14 +537,14 @@ Los GAPs e IDEAs de Zofía, agrupados por área de cambio en el lenguaje:
 |-------------|-------|--------|
 | `std/math` (nueva biblioteca) | GAP-Z001, GAP-Z002, IDEA-Z001 | ✅ resuelto v0.0.6 |
 | `std/random` | GAP-Z003 | ✅ resuelto v0.0.6 |
-| Formato numérico en `>>` | ~~GAP-Z004~~, IDEA-Z002 | `#.###\|x\|` cubre el caso; IDEA-Z002 → v0.0.7 |
+| Formato numérico en `>>` | ~~GAP-Z004~~, ~~IDEA-Z002~~ | ✅ cubierto — `#.N\|x\|` y `#^.N\|x\|` (verificado 2026-10-21) |
 | Operadores de colección | ~~IDEA-Z003~~ (`$@` map) | descartado — `$>` ya cubre |
 | Input tipado | IDEA-Z004 | propuesto v0.0.7 |
 | `$~` deep update canónico | GAP-Z006 | ✅ resuelto v0.0.6 — `arr[i>j]$~ val` |
 | `$~` para tuplas nombradas | GAP-Z007 | ✅ resuelto v0.0.6 — por posición y por nombre |
 | Inferencia numérica polimórfica | GAP-Z008 | ✅ resuelto v0.0.6 — `Numeric → Float` default |
 | HOF aliases en funciones nombradas | GAP-Z009 | ✅ resuelto v0.0.6 — `module_aliases` en `FunctionValue` |
-| Tipo `Tensor` nativo en VM | GAP-Z005 | largo plazo — no bloquea Zofía v1 |
+| Tipo `Tensor` nativo en VM | ~~GAP-Z005~~ | ✅ el motivo desapareció — el acceso `m[i>j]` es de coste constante (medido 2026-10-21); un tipo `Tensor` por otra razón sería otra entrada |
 
 ---
 
