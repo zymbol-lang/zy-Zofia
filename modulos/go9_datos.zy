@@ -69,7 +69,7 @@
         // que las marcas de tiempo, con prefijos casi iguales, se agrupen.
         h = 7
         identidad = ejecucion "/" partida
-        @ caracter:identidad { h = (h * 131 + 0d|caracter|) % 2147483647 }
+        @ caracter:identidad { h = (h * 131 + #|caracter|) % 2147483647 }
         cubeta = h % 100
         ? cubeta < 80 { <~ "train" }
         ? cubeta < 90 { <~ "valid" }
